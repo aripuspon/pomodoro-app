@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pomodoro Clock</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-wrapper">
+    <header>
+      <h1>Pomodoro</h1>
+      <div class="header-controls">
+        <button id="theme-toggle" class="badge-btn" title="Toggle Dark/Light Theme">Dark Mode</button>
+      </div>
+    </header>
+
+    <main>
+      <div class="intensity-modes">
+        <button class="mode-btn active" data-intensity="1" title="Standard: 25m Work / 5m Break">Standard (25m)</button>
+        <button class="mode-btn" data-intensity="2" title="Double: 50m Work / 10m Break">Double (50m)</button>
+        <button class="mode-btn" data-intensity="3" title="Triple: 75m Work / 15m Break">Triple (75m)</button>
+      </div>
+
+      <section class="timer-card">
+        <h2 id="timer-phase">Work Phase (Session 1)</h2>
+        <div class="time-display" id="time-display">25:00</div>
+        
+        <div class="timer-controls">
+          <button id="btn-start" class="control-btn primary" title="Start Timer">Play</button>
+          <button id="btn-pause" class="control-btn warning" title="Pause Timer" disabled>Pause</button>
+          <button id="btn-skip" class="control-btn secondary" title="Skip to next phase">Skip</button>
+          <button id="btn-reset" class="control-btn danger" title="Reset current phase">Reset</button>
+        </div>
+      </section>
+
+      <section class="task-section">
+        <div class="task-header">
+          <h3>Task List</h3>
+          <button id="btn-reset-all" class="small-btn danger" title="Reset tasks, session, and stats">Reset All</button>
+        </div>
+        
+        <form id="task-form" class="task-form">
+          <input type="text" id="task-title" placeholder="What are you working on?" required autocomplete="off" title="Enter task name">
+          <input type="number" id="task-est" min="1" max="10" placeholder="Est. Pomo" required title="Estimated Pomodoros needed">
+          <button type="submit" class="add-btn" title="Add Task">Add</button>
+        </form>
+
+        <ul id="task-list" class="task-list">
+          </ul>
+      </section>
+
+      <section class="stats-card">
+        <h3>Today's Statistics</h3>
+        <div class="stats-grid">
+          <div class="stat-box">
+            <span class="stat-value" id="stat-sessions">0</span>
+            <span class="stat-label">Sessions Done</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-value" id="stat-minutes">0</span>
+            <span class="stat-label">Focus Minutes</span>
+          </div>
+        </div>
+      </section>
+
+      <details class="settings-accordion" title="Click to open settings">
+        <summary>Settings</summary>
+        <div class="settings-content">
+          <div class="settings-row">
+            <label for="volume-slider">Alarm Volume</label>
+            <div class="volume-control">
+              <input type="range" id="volume-slider" min="0" max="1" step="0.1" value="0.5" title="Adjust volume">
+              <button id="btn-test-sound" class="small-btn" title="Test alarm sound">Test</button>
+            </div>
+          </div>
+
+          <div class="settings-row">
+            <label class="toggle-label" title="Show desktop pop-ups when timer finishes">
+              <input type="checkbox" id="toggle-notif">
+              <span>Desktop Notifications</span>
+            </label>
+          </div>
+
+          <div class="settings-row">
+            <label class="toggle-label" title="Automatically start breaks when work finishes">
+              <input type="checkbox" id="toggle-autostart">
+              <span>Auto-start Breaks</span>
+            </label>
+          </div>
+        </div>
+      </details>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
