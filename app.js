@@ -212,7 +212,7 @@ function pauseTimer() {
 
 function skipTimer() {
   pauseTimer();
-  handleTimerComplete(); // Skip akan otomatis memicu perpindahan fase
+  handleTimerComplete();
 }
 
 function resetTimer() {
@@ -235,8 +235,9 @@ function handleTimerComplete() {
     saveDailyStats();
 
     timerState.completedWorkSessions++;
-    incrementActiveTask();
     
+    // Increment otomatis ke task telah dimatikan agar daftar tugas murni sebagai checklist pengingat.
+
     if (timerState.completedWorkSessions % 4 === 0) {
       timerState.phase = 'longBreak';
     } else {
@@ -321,7 +322,7 @@ taskForm.addEventListener('submit', (e) => {
   const newTask = {
     id: Date.now().toString(),
     title: titleInput.value.trim(),
-    estPomodoros: parseInt(estInput.value),
+    estPomodoros: estInput.value ? parseInt(estInput.value) : null, // Opsional: Null jika kosong
     completedPomodoros: 0,
     isCompleted: false
   };
@@ -338,17 +339,14 @@ taskForm.addEventListener('submit', (e) => {
 
 btnResetAll.addEventListener('click', () => {
   if (confirm("Are you sure you want to reset EVERYTHING? This will delete all tasks, restart your session to 1, and clear today's statistics.")) {
-    // Reset Tasks
     tasks = [];
     activeTaskId = null;
     saveTasks();
     renderTasks();
     
-    // Reset Stats
     dailyStats = { date: new Date().toDateString(), sessions: 0, minutes: 0 };
     saveDailyStats();
     
-    // Reset Timer
     pauseTimer();
     timerState.phase = 'work';
     timerState.completedWorkSessions = 0;
@@ -372,28 +370,23 @@ function renderTasks() {
       }
     });
 
+    // Opsi A: Tampilkan counter hanya jika estPomodoros diisi oleh pengguna
+    const countDisplay = task.estPomodoros 
+      ? `<span class="task-pomo-count" title="Pomodoros completed">${task.completedPomodoros} / ${task.estPomodoros}</span>` 
+      : '';
+
     li.innerHTML = `
       <div class="task-info">
         <input type="checkbox" ${task.isCompleted ? 'checked' : ''} onchange="toggleTaskComplete('${task.id}')" title="Mark as done">
         <span class="task-title-text">${task.title}</span>
       </div>
       <div class="task-actions">
-        <span class="task-pomo-count" title="Pomodoros completed">${task.completedPomodoros} / ${task.estPomodoros}</span>
+        ${countDisplay}
         <button onclick="deleteTask('${task.id}')" title="Delete Task">Delete</button>
       </div>
     `;
     taskList.appendChild(li);
   });
-}
-
-function incrementActiveTask() {
-  if (!activeTaskId) return;
-  const taskIndex = tasks.findIndex(t => t.id === activeTaskId);
-  if (taskIndex !== -1 && !tasks[taskIndex].isCompleted) {
-    tasks[taskIndex].completedPomodoros++;
-    saveTasks();
-    renderTasks();
-  }
 }
 
 window.toggleTaskComplete = function(id) {
