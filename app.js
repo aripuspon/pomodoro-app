@@ -13,7 +13,8 @@ let theme = localStorage.getItem('theme') || 'light';
 let appSettings = JSON.parse(localStorage.getItem('appSettings')) || {
   volume: 0.5,
   notifications: false,
-  autoStart: false
+  autoStart: false,
+  autoStartWork: false
 };
 
 let timerState = JSON.parse(localStorage.getItem('timerState')) || {
@@ -99,6 +100,7 @@ const volSlider = document.getElementById('volume-slider');
 const btnTestSound = document.getElementById('btn-test-sound');
 const toggleNotif = document.getElementById('toggle-notif');
 const toggleAutoStart = document.getElementById('toggle-autostart');
+const toggleAutoStartWork = document.getElementById('toggle-autostart-work');
 const statSessions = document.getElementById('stat-sessions');
 const statMinutes = document.getElementById('stat-minutes');
 
@@ -140,6 +142,7 @@ function loadSettings() {
   volSlider.value = appSettings.volume;
   toggleNotif.checked = appSettings.notifications;
   toggleAutoStart.checked = appSettings.autoStart;
+  toggleAutoStartWork.checked = appSettings.autoStartWork || false;
 }
 
 function saveSettings() {
@@ -174,6 +177,11 @@ toggleNotif.addEventListener('change', (e) => {
 
 toggleAutoStart.addEventListener('change', (e) => {
   appSettings.autoStart = e.target.checked;
+  saveSettings();
+});
+
+toggleAutoStartWork.addEventListener('change', (e) => {
+  appSettings.autoStartWork = e.target.checked;
   saveSettings();
 });
 
@@ -249,8 +257,6 @@ function handleTimerComplete() {
     saveDailyStats();
 
     timerState.completedWorkSessions++;
-    
-    // (Matikan Sistem Auto-Increment ke Task sesuai kesepakatan)
 
     if (timerState.completedWorkSessions % 4 === 0) {
       timerState.phase = 'longBreak';
@@ -273,7 +279,9 @@ function handleTimerComplete() {
   btnStart.disabled = false;
   btnPause.disabled = true;
 
-  if (appSettings.autoStart && isEnteringBreak) {
+  if (isEnteringBreak && appSettings.autoStart) {
+    startTimer();
+  } else if (!isEnteringBreak && appSettings.autoStartWork) {
     startTimer();
   }
 }
@@ -327,9 +335,8 @@ modeBtns.forEach(btn => {
 });
 
 
-// --- TASK MANAGEMENT (REVISI BESAR) ---
+// --- TASK MANAGEMENT ---
 
-// 1. Toggles Form Expand/Collapse
 btnShowAddTask.addEventListener('click', () => {
   btnShowAddTask.classList.add('hidden');
   addTaskContainer.classList.remove('hidden');
@@ -367,7 +374,6 @@ function resetTaskForm() {
   btnShowAddTask.classList.remove('hidden');
 }
 
-// 2. Simpan Tugas Baru
 btnSaveTask.addEventListener('click', () => {
   const titleVal = inputTitle.value.trim();
   if (!titleVal) {
@@ -392,14 +398,12 @@ btnSaveTask.addEventListener('click', () => {
   resetTaskForm();
 });
 
-// 3. Render List & Fungsi Centang/Delete
 function renderTasks() {
   taskList.innerHTML = '';
   tasks.forEach(task => {
     const li = document.createElement('li');
     li.className = `task-item ${task.id === activeTaskId ? 'active' : ''} ${task.isCompleted ? 'completed' : ''}`;
     
-    // Klik area kartu untuk set Active (selain klik tombol)
     li.addEventListener('click', (e) => {
       if(!e.target.closest('.custom-checkbox') && !e.target.closest('.task-opt-menu')) {
         activeTaskId = task.id;
@@ -408,18 +412,13 @@ function renderTasks() {
       }
     });
 
-    // Indikator Pomo (Hanya muncul jika estPomodoros diisi)
     const countDisplay = task.estPomodoros 
       ? `<span class="task-pomo-count">0 / ${task.estPomodoros}</span>` 
       : '';
       
-    // Ikon Centang Dinamis
     const checkIcon = task.isCompleted ? '✓' : '';
-
-    // Project Tag (Jika ada)
     const projectTag = task.project ? `<span class="task-project-tag">${task.project}</span>` : '';
 
-    // HTML Utama Baris Pertama
     let htmlContent = `
       <div class="task-main-row">
         <div class="task-info-group">
@@ -433,7 +432,6 @@ function renderTasks() {
       </div>
     `;
 
-    // Note Box (Jika ada)
     if (task.note) {
       htmlContent += `<div class="task-note-box">${task.note.replace(/\n/g, '<br>')}</div>`;
     }
@@ -463,7 +461,6 @@ window.deleteTask = function(id) {
   }
 }
 
-// 4. Reset All (Tombol Titik Tiga di Header)
 btnResetAll.addEventListener('click', () => {
   if (confirm("Reset ALL tasks, session, and stats?")) {
     tasks = [];
@@ -483,14 +480,13 @@ btnResetAll.addEventListener('click', () => {
   }
 });
 
-// 5. Kalkulasi Summary "Finish At"
 function updateTaskSummary() {
   let totalEst = 0;
   let completedEst = 0;
   let remainingEst = 0;
 
   tasks.forEach(t => {
-    const est = t.estPomodoros || 0; // Jika dikosongkan (null), nilai = 0
+    const est = t.estPomodoros || 0;
     totalEst += est;
     if (t.isCompleted) {
       completedEst += est;
@@ -505,7 +501,6 @@ function updateTaskSummary() {
     const workSecs = CONFIG[timerState.intensity].work;
     const shortBreakSecs = CONFIG[timerState.intensity].shortBreak;
     
-    // Perhitungan sederhana (Sesi + Break) untuk waktu selesai
     let totalSecs = 0;
     for (let i = 0; i < remainingEst; i++) {
       totalSecs += workSecs;
