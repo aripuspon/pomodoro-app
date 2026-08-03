@@ -35,7 +35,6 @@ let targetEndTime = null;
 
 // --- AUDIO ENGINE ---
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-
 function playAlarmSound() {
   if (appSettings.volume <= 0) return;
   if (audioCtx.state === 'suspended') audioCtx.resume();
@@ -52,7 +51,6 @@ function playAlarmSound() {
     osc.start(startTime);
     osc.stop(startTime + 0.5);
   };
-
   const now = audioCtx.currentTime;
   playBeep(now, 800);
   playBeep(now + 0.2, 1000);
@@ -76,10 +74,27 @@ const btnPause = document.getElementById('btn-pause');
 const btnSkip = document.getElementById('btn-skip');
 const btnReset = document.getElementById('btn-reset');
 
-const taskForm = document.getElementById('task-form');
+// Tasks DOM
 const taskList = document.getElementById('task-list');
 const btnResetAll = document.getElementById('btn-reset-all');
+const btnShowAddTask = document.getElementById('btn-show-add-task');
+const addTaskContainer = document.getElementById('add-task-container');
+const btnCancelTask = document.getElementById('btn-cancel-task');
+const btnSaveTask = document.getElementById('btn-save-task');
 
+// Task Form Fields
+const inputTitle = document.getElementById('task-title');
+const inputEst = document.getElementById('task-est');
+const btnAddNote = document.getElementById('btn-add-note');
+const btnAddProject = document.getElementById('btn-add-project');
+const inputNote = document.getElementById('task-note');
+const inputProject = document.getElementById('task-project');
+
+// Summary DOM
+const summaryPomos = document.getElementById('summary-pomos');
+const summaryFinish = document.getElementById('summary-finish');
+
+// Settings DOM
 const volSlider = document.getElementById('volume-slider');
 const btnTestSound = document.getElementById('btn-test-sound');
 const toggleNotif = document.getElementById('toggle-notif');
@@ -136,7 +151,6 @@ volSlider.addEventListener('input', (e) => {
   appSettings.volume = parseFloat(e.target.value);
   saveSettings();
 });
-
 btnTestSound.addEventListener('click', playAlarmSound);
 
 toggleNotif.addEventListener('change', (e) => {
@@ -236,7 +250,7 @@ function handleTimerComplete() {
 
     timerState.completedWorkSessions++;
     
-    // Increment otomatis ke task telah dimatikan agar daftar tugas murni sebagai checklist pengingat.
+    // (Matikan Sistem Auto-Increment ke Task sesuai kesepakatan)
 
     if (timerState.completedWorkSessions % 4 === 0) {
       timerState.phase = 'longBreak';
@@ -295,7 +309,6 @@ function updateDisplay() {
   else phaseText = `Long Break`;
   
   timerPhaseDisplay.textContent = phaseText;
-  
   document.title = `(${timeString}) Pomodoro`;
 }
 
@@ -313,18 +326,62 @@ modeBtns.forEach(btn => {
   btn.addEventListener('click', (e) => setIntensityMode(parseInt(e.target.dataset.intensity)));
 });
 
-// --- TASK MANAGEMENT & RESET ALL ---
-taskForm.addEventListener('submit', (e) => {
-  e.preventDefault();
-  const titleInput = document.getElementById('task-title');
-  const estInput = document.getElementById('task-est');
+
+// --- TASK MANAGEMENT (REVISI BESAR) ---
+
+// 1. Toggles Form Expand/Collapse
+btnShowAddTask.addEventListener('click', () => {
+  btnShowAddTask.classList.add('hidden');
+  addTaskContainer.classList.remove('hidden');
+  inputTitle.focus();
+});
+
+btnCancelTask.addEventListener('click', () => {
+  resetTaskForm();
+});
+
+btnAddNote.addEventListener('click', () => {
+  inputNote.classList.remove('hidden');
+  btnAddNote.classList.add('hidden');
+  inputNote.focus();
+});
+
+btnAddProject.addEventListener('click', () => {
+  inputProject.classList.remove('hidden');
+  btnAddProject.classList.add('hidden');
+  inputProject.focus();
+});
+
+function resetTaskForm() {
+  inputTitle.value = '';
+  inputEst.value = '';
+  inputNote.value = '';
+  inputProject.value = '';
+  
+  inputNote.classList.add('hidden');
+  inputProject.classList.add('hidden');
+  btnAddNote.classList.remove('hidden');
+  btnAddProject.classList.remove('hidden');
+  
+  addTaskContainer.classList.add('hidden');
+  btnShowAddTask.classList.remove('hidden');
+}
+
+// 2. Simpan Tugas Baru
+btnSaveTask.addEventListener('click', () => {
+  const titleVal = inputTitle.value.trim();
+  if (!titleVal) {
+    alert("Task title cannot be empty!");
+    return;
+  }
 
   const newTask = {
     id: Date.now().toString(),
-    title: titleInput.value.trim(),
-    estPomodoros: estInput.value ? parseInt(estInput.value) : null, // Opsional: Null jika kosong
-    completedPomodoros: 0,
-    isCompleted: false
+    title: titleVal,
+    estPomodoros: inputEst.value ? parseInt(inputEst.value) : null,
+    isCompleted: false,
+    note: inputNote.value.trim(),
+    project: inputProject.value.trim()
   };
 
   tasks.push(newTask);
@@ -332,13 +389,83 @@ taskForm.addEventListener('submit', (e) => {
   
   saveTasks();
   renderTasks();
-  
-  titleInput.value = '';
-  estInput.value = '';
+  resetTaskForm();
 });
 
+// 3. Render List & Fungsi Centang/Delete
+function renderTasks() {
+  taskList.innerHTML = '';
+  tasks.forEach(task => {
+    const li = document.createElement('li');
+    li.className = `task-item ${task.id === activeTaskId ? 'active' : ''} ${task.isCompleted ? 'completed' : ''}`;
+    
+    // Klik area kartu untuk set Active (selain klik tombol)
+    li.addEventListener('click', (e) => {
+      if(!e.target.closest('.custom-checkbox') && !e.target.closest('.task-opt-menu')) {
+        activeTaskId = task.id;
+        saveTasks();
+        renderTasks();
+      }
+    });
+
+    // Indikator Pomo (Hanya muncul jika estPomodoros diisi)
+    const countDisplay = task.estPomodoros 
+      ? `<span class="task-pomo-count">0 / ${task.estPomodoros}</span>` 
+      : '';
+      
+    // Ikon Centang Dinamis
+    const checkIcon = task.isCompleted ? '✓' : '';
+
+    // Project Tag (Jika ada)
+    const projectTag = task.project ? `<span class="task-project-tag">${task.project}</span>` : '';
+
+    // HTML Utama Baris Pertama
+    let htmlContent = `
+      <div class="task-main-row">
+        <div class="task-info-group">
+          <div class="custom-checkbox" onclick="toggleTaskComplete('${task.id}')" title="Mark as done">${checkIcon}</div>
+          <span class="task-title-text">${task.title} ${projectTag}</span>
+        </div>
+        <div class="task-right-group">
+          ${countDisplay}
+          <button class="task-opt-menu" onclick="deleteTask('${task.id}')" title="Delete Task">⋮</button>
+        </div>
+      </div>
+    `;
+
+    // Note Box (Jika ada)
+    if (task.note) {
+      htmlContent += `<div class="task-note-box">${task.note.replace(/\n/g, '<br>')}</div>`;
+    }
+
+    li.innerHTML = htmlContent;
+    taskList.appendChild(li);
+  });
+
+  updateTaskSummary();
+}
+
+window.toggleTaskComplete = function(id) {
+  const task = tasks.find(t => t.id === id);
+  if (task) {
+    task.isCompleted = !task.isCompleted;
+    saveTasks();
+    renderTasks();
+  }
+}
+
+window.deleteTask = function(id) {
+  if(confirm("Are you sure you want to delete this task?")) {
+    tasks = tasks.filter(t => t.id !== id);
+    if (activeTaskId === id) activeTaskId = null;
+    saveTasks();
+    renderTasks();
+  }
+}
+
+// 4. Reset All (Tombol Titik Tiga di Header)
 btnResetAll.addEventListener('click', () => {
-  if (confirm("Are you sure you want to reset EVERYTHING? This will delete all tasks, restart your session to 1, and clear today's statistics.")) {
+  if (confirm("Reset ALL tasks, session, and stats?")) {
     tasks = [];
     activeTaskId = null;
     saveTasks();
@@ -356,53 +483,44 @@ btnResetAll.addEventListener('click', () => {
   }
 });
 
-function renderTasks() {
-  taskList.innerHTML = '';
-  tasks.forEach(task => {
-    const li = document.createElement('li');
-    li.className = `task-item ${task.id === activeTaskId ? 'active' : ''} ${task.isCompleted ? 'completed' : ''}`;
-    
-    li.addEventListener('click', (e) => {
-      if(e.target.tagName !== 'BUTTON' && e.target.type !== 'checkbox') {
-        activeTaskId = task.id;
-        saveTasks();
-        renderTasks();
-      }
-    });
+// 5. Kalkulasi Summary "Finish At"
+function updateTaskSummary() {
+  let totalEst = 0;
+  let completedEst = 0;
+  let remainingEst = 0;
 
-    // Opsi A: Tampilkan counter hanya jika estPomodoros diisi oleh pengguna
-    const countDisplay = task.estPomodoros 
-      ? `<span class="task-pomo-count" title="Pomodoros completed">${task.completedPomodoros} / ${task.estPomodoros}</span>` 
-      : '';
-
-    li.innerHTML = `
-      <div class="task-info">
-        <input type="checkbox" ${task.isCompleted ? 'checked' : ''} onchange="toggleTaskComplete('${task.id}')" title="Mark as done">
-        <span class="task-title-text">${task.title}</span>
-      </div>
-      <div class="task-actions">
-        ${countDisplay}
-        <button onclick="deleteTask('${task.id}')" title="Delete Task">Delete</button>
-      </div>
-    `;
-    taskList.appendChild(li);
+  tasks.forEach(t => {
+    const est = t.estPomodoros || 0; // Jika dikosongkan (null), nilai = 0
+    totalEst += est;
+    if (t.isCompleted) {
+      completedEst += est;
+    } else {
+      remainingEst += est;
+    }
   });
-}
 
-window.toggleTaskComplete = function(id) {
-  const task = tasks.find(t => t.id === id);
-  if (task) {
-    task.isCompleted = !task.isCompleted;
-    saveTasks();
-    renderTasks();
+  summaryPomos.innerHTML = `Pomos: <strong>${completedEst} / ${totalEst}</strong>`;
+
+  if (remainingEst > 0) {
+    const workSecs = CONFIG[timerState.intensity].work;
+    const shortBreakSecs = CONFIG[timerState.intensity].shortBreak;
+    
+    // Perhitungan sederhana (Sesi + Break) untuk waktu selesai
+    let totalSecs = 0;
+    for (let i = 0; i < remainingEst; i++) {
+      totalSecs += workSecs;
+      if (i < remainingEst - 1) totalSecs += shortBreakSecs; 
+    }
+    
+    const finishDate = new Date(Date.now() + totalSecs * 1000);
+    const hours = finishDate.getHours().toString().padStart(2, '0');
+    const mins = finishDate.getMinutes().toString().padStart(2, '0');
+    const durationH = (totalSecs / 3600).toFixed(1);
+    
+    summaryFinish.innerHTML = `Finish At: <strong>${hours}:${mins}</strong> (${durationH}h)`;
+  } else {
+    summaryFinish.innerHTML = `Finish At: <strong>--:--</strong> (0h)`;
   }
-}
-
-window.deleteTask = function(id) {
-  tasks = tasks.filter(t => t.id !== id);
-  if (activeTaskId === id) activeTaskId = null;
-  saveTasks();
-  renderTasks();
 }
 
 function saveTasks() {
