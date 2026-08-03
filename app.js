@@ -8,27 +8,19 @@ const CONFIG = {
 // --- APP STATE ---
 let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
 let activeTaskId = localStorage.getItem('activeTaskId') || null;
+let editingTaskId = null; // Menyimpan ID tugas yang sedang di-edit
 let theme = localStorage.getItem('theme') || 'light';
 
 let appSettings = JSON.parse(localStorage.getItem('appSettings')) || {
-  volume: 0.5,
-  notifications: false,
-  autoStart: false,
-  autoStartWork: false
+  volume: 0.5, notifications: false, autoStart: false, autoStartWork: false
 };
 
 let timerState = JSON.parse(localStorage.getItem('timerState')) || {
-  phase: 'work',
-  intensity: 1,
-  remainingSeconds: CONFIG[1].work,
-  isRunning: false,
-  completedWorkSessions: 0
+  phase: 'work', intensity: 1, remainingSeconds: CONFIG[1].work, isRunning: false, completedWorkSessions: 0
 };
 
 let dailyStats = JSON.parse(localStorage.getItem('dailyStats')) || {
-  date: new Date().toDateString(),
-  sessions: 0,
-  minutes: 0
+  date: new Date().toDateString(), sessions: 0, minutes: 0
 };
 
 let timerInterval = null;
@@ -43,21 +35,16 @@ function playAlarmSound() {
   const playBeep = (startTime, freq) => {
     const osc = audioCtx.createOscillator();
     const gainNode = audioCtx.createGain();
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(freq, startTime);
+    osc.type = 'sine'; osc.frequency.setValueAtTime(freq, startTime);
     gainNode.gain.setValueAtTime(appSettings.volume, startTime);
     gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + 0.5);
-    osc.connect(gainNode);
-    gainNode.connect(audioCtx.destination);
-    osc.start(startTime);
-    osc.stop(startTime + 0.5);
+    osc.connect(gainNode); gainNode.connect(audioCtx.destination);
+    osc.start(startTime); osc.stop(startTime + 0.5);
   };
   const now = audioCtx.currentTime;
-  playBeep(now, 800);
-  playBeep(now + 0.2, 1000);
+  playBeep(now, 800); playBeep(now + 0.2, 1000);
 }
 
-// --- DESKTOP NOTIFICATIONS ---
 function sendDesktopNotification(title, body) {
   if (appSettings.notifications && Notification.permission === 'granted') {
     new Notification(title, { body: body });
@@ -77,13 +64,12 @@ const btnReset = document.getElementById('btn-reset');
 
 // Tasks DOM
 const taskList = document.getElementById('task-list');
-const btnResetAll = document.getElementById('btn-reset-all');
 const btnShowAddTask = document.getElementById('btn-show-add-task');
 const addTaskContainer = document.getElementById('add-task-container');
 const btnCancelTask = document.getElementById('btn-cancel-task');
 const btnSaveTask = document.getElementById('btn-save-task');
 
-// Task Form Fields
+// Task Form Fields (Add)
 const inputTitle = document.getElementById('task-title');
 const inputEst = document.getElementById('task-est');
 const btnAddNote = document.getElementById('btn-add-note');
@@ -91,7 +77,10 @@ const btnAddProject = document.getElementById('btn-add-project');
 const inputNote = document.getElementById('task-note');
 const inputProject = document.getElementById('task-project');
 
-// Summary DOM
+// Dropdown DOM
+const btnTaskOptions = document.getElementById('btn-task-options');
+const taskDropdownMenu = document.getElementById('task-dropdown-menu');
+
 const summaryPomos = document.getElementById('summary-pomos');
 const summaryFinish = document.getElementById('summary-finish');
 
@@ -106,91 +95,43 @@ const statMinutes = document.getElementById('stat-minutes');
 
 // --- INITIALIZATION ---
 function init() {
-  checkDailyStatsReset();
-  applyTheme(theme);
-  loadSettings();
-  renderTasks();
-  updateStatsDisplay();
-  updateModeButtons();
-  
-  if (timerState.isRunning) {
-    timerState.isRunning = false;
-    saveTimerState();
-  }
+  checkDailyStatsReset(); applyTheme(theme); loadSettings();
+  renderTasks(); updateStatsDisplay(); updateModeButtons();
+  if (timerState.isRunning) { timerState.isRunning = false; saveTimerState(); }
   updateDisplay();
 }
 
 function checkDailyStatsReset() {
   const today = new Date().toDateString();
-  if (dailyStats.date !== today) {
-    dailyStats = { date: today, sessions: 0, minutes: 0 };
-    saveDailyStats();
-  }
+  if (dailyStats.date !== today) { dailyStats = { date: today, sessions: 0, minutes: 0 }; saveDailyStats(); }
 }
-
-function saveDailyStats() {
-  localStorage.setItem('dailyStats', JSON.stringify(dailyStats));
-  updateStatsDisplay();
-}
-
-function updateStatsDisplay() {
-  statSessions.textContent = dailyStats.sessions;
-  statMinutes.textContent = dailyStats.minutes;
-}
+function saveDailyStats() { localStorage.setItem('dailyStats', JSON.stringify(dailyStats)); updateStatsDisplay(); }
+function updateStatsDisplay() { statSessions.textContent = dailyStats.sessions; statMinutes.textContent = dailyStats.minutes; }
 
 function loadSettings() {
-  volSlider.value = appSettings.volume;
-  toggleNotif.checked = appSettings.notifications;
-  toggleAutoStart.checked = appSettings.autoStart;
-  toggleAutoStartWork.checked = appSettings.autoStartWork || false;
+  volSlider.value = appSettings.volume; toggleNotif.checked = appSettings.notifications;
+  toggleAutoStart.checked = appSettings.autoStart; toggleAutoStartWork.checked = appSettings.autoStartWork || false;
 }
+function saveSettings() { localStorage.setItem('appSettings', JSON.stringify(appSettings)); }
 
-function saveSettings() {
-  localStorage.setItem('appSettings', JSON.stringify(appSettings));
-}
-
-// --- SETTINGS LISTENERS ---
-volSlider.addEventListener('input', (e) => {
-  appSettings.volume = parseFloat(e.target.value);
-  saveSettings();
-});
+// Settings Listeners
+volSlider.addEventListener('input', (e) => { appSettings.volume = parseFloat(e.target.value); saveSettings(); });
 btnTestSound.addEventListener('click', playAlarmSound);
-
 toggleNotif.addEventListener('change', (e) => {
   if (e.target.checked) {
     Notification.requestPermission().then(perm => {
-      if (perm === 'granted') {
-        appSettings.notifications = true;
-        new Notification("Permission Granted", { body: "Notifications are ready!" });
-      } else {
-        e.target.checked = false;
-        appSettings.notifications = false;
-        alert("Notification permission denied by browser.");
-      }
+      if (perm === 'granted') { appSettings.notifications = true; new Notification("Permission Granted", { body: "Notifications are ready!" }); }
+      else { e.target.checked = false; appSettings.notifications = false; alert("Notification permission denied by browser."); }
       saveSettings();
     });
-  } else {
-    appSettings.notifications = false;
-    saveSettings();
-  }
+  } else { appSettings.notifications = false; saveSettings(); }
 });
+toggleAutoStart.addEventListener('change', (e) => { appSettings.autoStart = e.target.checked; saveSettings(); });
+toggleAutoStartWork.addEventListener('change', (e) => { appSettings.autoStartWork = e.target.checked; saveSettings(); });
 
-toggleAutoStart.addEventListener('change', (e) => {
-  appSettings.autoStart = e.target.checked;
-  saveSettings();
-});
-
-toggleAutoStartWork.addEventListener('change', (e) => {
-  appSettings.autoStartWork = e.target.checked;
-  saveSettings();
-});
-
-// --- THEME ---
 function applyTheme(selectedTheme) {
-  theme = selectedTheme;
-  htmlDoc.setAttribute('data-theme', theme);
-  themeToggleBtn.textContent = theme === 'dark' ? 'Light Mode' : 'Dark Mode';
-  localStorage.setItem('theme', theme);
+  theme = selectedTheme; htmlDoc.setAttribute('data-theme', theme);
+  themeToggleBtn.textContent = theme === 'dark' ? 'Light Mode' : 'Dark Mode'; localStorage.setItem('theme', theme);
 }
 themeToggleBtn.addEventListener('click', () => applyTheme(theme === 'light' ? 'dark' : 'light'));
 
@@ -198,301 +139,231 @@ themeToggleBtn.addEventListener('click', () => applyTheme(theme === 'light' ? 'd
 function startTimer() {
   if (timerState.isRunning) return;
   if (audioCtx.state === 'suspended') audioCtx.resume();
-  
   timerState.isRunning = true;
   targetEndTime = Date.now() + (timerState.remainingSeconds * 1000);
-  
-  btnStart.disabled = true;
-  btnPause.disabled = false;
-
+  btnStart.disabled = true; btnPause.disabled = false;
   timerInterval = setInterval(() => {
-    const now = Date.now();
-    const secondsLeft = Math.round((targetEndTime - now) / 1000);
-
-    if (secondsLeft <= 0) {
-      clearInterval(timerInterval);
-      timerState.remainingSeconds = 0;
-      handleTimerComplete();
-    } else {
-      timerState.remainingSeconds = secondsLeft;
-      updateDisplay();
-    }
+    const now = Date.now(); const secondsLeft = Math.round((targetEndTime - now) / 1000);
+    if (secondsLeft <= 0) { clearInterval(timerInterval); timerState.remainingSeconds = 0; handleTimerComplete(); }
+    else { timerState.remainingSeconds = secondsLeft; updateDisplay(); }
   }, 200);
-  
   saveTimerState();
 }
 
 function pauseTimer() {
   if (!timerState.isRunning) return;
-  clearInterval(timerInterval);
-  timerState.isRunning = false;
-  btnStart.disabled = false;
-  btnPause.disabled = true;
-  saveTimerState();
-  updateDisplay();
+  clearInterval(timerInterval); timerState.isRunning = false;
+  btnStart.disabled = false; btnPause.disabled = true; saveTimerState(); updateDisplay();
 }
 
-function skipTimer() {
-  pauseTimer();
-  handleTimerComplete();
-}
-
-function resetTimer() {
-  pauseTimer();
-  timerState.remainingSeconds = CONFIG[timerState.intensity][timerState.phase];
-  saveTimerState();
-  updateDisplay();
-}
+function skipTimer() { pauseTimer(); handleTimerComplete(); }
+function resetTimer() { pauseTimer(); timerState.remainingSeconds = CONFIG[timerState.intensity][timerState.phase]; saveTimerState(); updateDisplay(); }
 
 function handleTimerComplete() {
-  timerState.isRunning = false;
-  playAlarmSound(); 
-  
-  let notifBody = "";
-  let isEnteringBreak = false;
+  timerState.isRunning = false; playAlarmSound(); 
+  let notifBody = ""; let isEnteringBreak = false;
   
   if (timerState.phase === 'work') {
-    dailyStats.sessions++;
-    dailyStats.minutes += CONFIG[timerState.intensity].mins;
-    saveDailyStats();
-
+    dailyStats.sessions++; dailyStats.minutes += CONFIG[timerState.intensity].mins; saveDailyStats();
     timerState.completedWorkSessions++;
-
-    if (timerState.completedWorkSessions % 4 === 0) {
-      timerState.phase = 'longBreak';
-    } else {
-      timerState.phase = 'shortBreak';
-    }
-    notifBody = "Work done! Time for a break.";
-    isEnteringBreak = true;
+    if (timerState.completedWorkSessions % 4 === 0) { timerState.phase = 'longBreak'; } else { timerState.phase = 'shortBreak'; }
+    notifBody = "Work done! Time for a break."; isEnteringBreak = true;
   } else {
-    timerState.phase = 'work';
-    notifBody = "Break is over! Let's focus.";
+    timerState.phase = 'work'; notifBody = "Break is over! Let's focus.";
   }
-
   sendDesktopNotification("Pomodoro Timer", notifBody);
-
-  timerState.remainingSeconds = CONFIG[timerState.intensity][timerState.phase];
-  saveTimerState();
-  updateDisplay();
-  
-  btnStart.disabled = false;
-  btnPause.disabled = true;
-
-  if (isEnteringBreak && appSettings.autoStart) {
-    startTimer();
-  } else if (!isEnteringBreak && appSettings.autoStartWork) {
-    startTimer();
-  }
+  timerState.remainingSeconds = CONFIG[timerState.intensity][timerState.phase]; saveTimerState(); updateDisplay();
+  btnStart.disabled = false; btnPause.disabled = true;
+  if (isEnteringBreak && appSettings.autoStart) { startTimer(); } else if (!isEnteringBreak && appSettings.autoStartWork) { startTimer(); }
 }
 
 function setIntensityMode(intensity) {
-  pauseTimer();
-  timerState.intensity = intensity;
-  timerState.phase = 'work';
-  timerState.remainingSeconds = CONFIG[intensity].work;
-  timerState.completedWorkSessions = 0;
-  
-  updateModeButtons();
-  saveTimerState();
-  updateDisplay();
+  pauseTimer(); timerState.intensity = intensity; timerState.phase = 'work';
+  timerState.remainingSeconds = CONFIG[intensity].work; timerState.completedWorkSessions = 0;
+  updateModeButtons(); saveTimerState(); updateDisplay();
 }
 
-function updateModeButtons() {
-  modeBtns.forEach(btn => {
-    btn.classList.toggle('active', parseInt(btn.dataset.intensity) === timerState.intensity);
-  });
-}
+function updateModeButtons() { modeBtns.forEach(btn => { btn.classList.toggle('active', parseInt(btn.dataset.intensity) === timerState.intensity); }); }
 
 function updateDisplay() {
-  const mins = Math.floor(timerState.remainingSeconds / 60);
-  const secs = timerState.remainingSeconds % 60;
+  const mins = Math.floor(timerState.remainingSeconds / 60); const secs = timerState.remainingSeconds % 60;
   const timeString = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  
   timeDisplay.textContent = timeString;
-  
   let phaseText = '';
   if (timerState.phase === 'work') phaseText = `Work Phase (Session ${timerState.completedWorkSessions + 1})`;
-  else if (timerState.phase === 'shortBreak') phaseText = `Short Break`;
-  else phaseText = `Long Break`;
-  
-  timerPhaseDisplay.textContent = phaseText;
-  document.title = `(${timeString}) Pomodoro`;
+  else if (timerState.phase === 'shortBreak') phaseText = `Short Break`; else phaseText = `Long Break`;
+  timerPhaseDisplay.textContent = phaseText; document.title = `(${timeString}) Pomodoro`;
 }
 
-function saveTimerState() {
-  localStorage.setItem('timerState', JSON.stringify(timerState));
-}
+function saveTimerState() { localStorage.setItem('timerState', JSON.stringify(timerState)); }
 
-// --- CONTROLS LISTENERS ---
-btnStart.addEventListener('click', startTimer);
-btnPause.addEventListener('click', pauseTimer);
-btnSkip.addEventListener('click', skipTimer);
-btnReset.addEventListener('click', resetTimer);
-
-modeBtns.forEach(btn => {
-  btn.addEventListener('click', (e) => setIntensityMode(parseInt(e.target.dataset.intensity)));
-});
-
+btnStart.addEventListener('click', startTimer); btnPause.addEventListener('click', pauseTimer);
+btnSkip.addEventListener('click', skipTimer); btnReset.addEventListener('click', resetTimer);
+modeBtns.forEach(btn => { btn.addEventListener('click', (e) => setIntensityMode(parseInt(e.target.dataset.intensity))); });
 
 // --- TASK MANAGEMENT ---
 
+// 1. Dropdown Menu Logic
+btnTaskOptions.addEventListener('click', (e) => {
+  e.stopPropagation(); taskDropdownMenu.classList.toggle('hidden');
+});
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.dropdown-wrapper')) { taskDropdownMenu.classList.add('hidden'); }
+});
+
+document.getElementById('menu-clear-finished').addEventListener('click', () => {
+  if (confirm("Delete all finished tasks?")) { tasks = tasks.filter(t => !t.isCompleted); saveTasks(); renderTasks(); }
+});
+document.getElementById('menu-clear-act').addEventListener('click', () => {
+  if (confirm("Reset pomodoro count for all tasks?")) { tasks.forEach(t => t.completedPomodoros = 0); saveTasks(); renderTasks(); }
+});
+document.getElementById('menu-uncheck-all').addEventListener('click', () => {
+  if (confirm("Uncheck all completed tasks?")) { tasks.forEach(t => t.isCompleted = false); saveTasks(); renderTasks(); }
+});
+document.getElementById('menu-delete-all').addEventListener('click', () => {
+  if (confirm("Are you sure you want to delete ALL tasks?")) { tasks = []; activeTaskId = null; saveTasks(); renderTasks(); }
+});
+document.getElementById('menu-reset-all').addEventListener('click', () => {
+  if (confirm("Reset ALL tasks, session, and stats?")) {
+    tasks = []; activeTaskId = null; saveTasks(); renderTasks();
+    dailyStats = { date: new Date().toDateString(), sessions: 0, minutes: 0 }; saveDailyStats();
+    pauseTimer(); timerState.phase = 'work'; timerState.completedWorkSessions = 0; timerState.remainingSeconds = CONFIG[timerState.intensity].work; saveTimerState(); updateDisplay();
+  }
+});
+
+
+// 2. Add Task Logic
 btnShowAddTask.addEventListener('click', () => {
-  btnShowAddTask.classList.add('hidden');
-  addTaskContainer.classList.remove('hidden');
-  inputTitle.focus();
+  btnShowAddTask.classList.add('hidden'); addTaskContainer.classList.remove('hidden'); inputTitle.focus();
 });
-
-btnCancelTask.addEventListener('click', () => {
-  resetTaskForm();
-});
-
-btnAddNote.addEventListener('click', () => {
-  inputNote.classList.remove('hidden');
-  btnAddNote.classList.add('hidden');
-  inputNote.focus();
-});
-
-btnAddProject.addEventListener('click', () => {
-  inputProject.classList.remove('hidden');
-  btnAddProject.classList.add('hidden');
-  inputProject.focus();
-});
+btnCancelTask.addEventListener('click', () => { resetTaskForm(); });
+btnAddNote.addEventListener('click', () => { inputNote.classList.remove('hidden'); btnAddNote.classList.add('hidden'); inputNote.focus(); });
+btnAddProject.addEventListener('click', () => { inputProject.classList.remove('hidden'); btnAddProject.classList.add('hidden'); inputProject.focus(); });
 
 function resetTaskForm() {
-  inputTitle.value = '';
-  inputEst.value = '';
-  inputNote.value = '';
-  inputProject.value = '';
-  
-  inputNote.classList.add('hidden');
-  inputProject.classList.add('hidden');
-  btnAddNote.classList.remove('hidden');
-  btnAddProject.classList.remove('hidden');
-  
-  addTaskContainer.classList.add('hidden');
-  btnShowAddTask.classList.remove('hidden');
+  inputTitle.value = ''; inputEst.value = ''; inputNote.value = ''; inputProject.value = '';
+  inputNote.classList.add('hidden'); inputProject.classList.add('hidden');
+  btnAddNote.classList.remove('hidden'); btnAddProject.classList.remove('hidden');
+  addTaskContainer.classList.add('hidden'); btnShowAddTask.classList.remove('hidden');
 }
 
 btnSaveTask.addEventListener('click', () => {
   const titleVal = inputTitle.value.trim();
-  if (!titleVal) {
-    alert("Task title cannot be empty!");
-    return;
-  }
-
+  if (!titleVal) { alert("Task title cannot be empty!"); return; }
   const newTask = {
-    id: Date.now().toString(),
-    title: titleVal,
-    estPomodoros: inputEst.value ? parseInt(inputEst.value) : null,
-    isCompleted: false,
-    note: inputNote.value.trim(),
-    project: inputProject.value.trim()
+    id: Date.now().toString(), title: titleVal, estPomodoros: inputEst.value ? parseInt(inputEst.value) : null,
+    completedPomodoros: 0, isCompleted: false, note: inputNote.value.trim(), project: inputProject.value.trim()
   };
-
-  tasks.push(newTask);
-  if (!activeTaskId) activeTaskId = newTask.id;
-  
-  saveTasks();
-  renderTasks();
-  resetTaskForm();
+  tasks.push(newTask); if (!activeTaskId) activeTaskId = newTask.id;
+  saveTasks(); renderTasks(); resetTaskForm();
 });
 
+// 3. Render Tasks (Dengan Fitur Inline Edit)
 function renderTasks() {
   taskList.innerHTML = '';
   tasks.forEach(task => {
     const li = document.createElement('li');
     li.className = `task-item ${task.id === activeTaskId ? 'active' : ''} ${task.isCompleted ? 'completed' : ''}`;
-    
-    li.addEventListener('click', (e) => {
-      if(!e.target.closest('.custom-checkbox') && !e.target.closest('.task-opt-menu')) {
-        activeTaskId = task.id;
-        saveTasks();
-        renderTasks();
-      }
-    });
 
-    const countDisplay = task.estPomodoros 
-      ? `<span class="task-pomo-count">0 / ${task.estPomodoros}</span>` 
-      : '';
+    if (editingTaskId === task.id) {
+      // TAMPILAN EDIT FORM (Mirip Add Form)
+      li.classList.add('add-task-container', 'edit-mode-card');
+      li.classList.remove('task-item'); // Hapus hover biasa
       
-    const checkIcon = task.isCompleted ? '✓' : '';
-    const projectTag = task.project ? `<span class="task-project-tag">${task.project}</span>` : '';
-
-    let htmlContent = `
-      <div class="task-main-row">
-        <div class="task-info-group">
-          <div class="custom-checkbox" onclick="toggleTaskComplete('${task.id}')" title="Mark as done">${checkIcon}</div>
-          <span class="task-title-text">${task.title} ${projectTag}</span>
+      li.innerHTML = `
+        <input type="text" id="edit-title-${task.id}" value="${task.title}" class="task-title-input" required autocomplete="off">
+        <div class="task-form-details">
+          <div class="est-pomo-wrapper">
+            <label>Est Pomodoros</label>
+            <input type="number" id="edit-est-${task.id}" class="task-est-input" min="1" step="1" value="${task.estPomodoros !== null ? task.estPomodoros : ''}">
+          </div>
+          <div class="extra-fields-toggles">
+            <button type="button" class="link-btn" onclick="document.getElementById('edit-note-${task.id}').classList.toggle('hidden')">+ Add Note</button>
+            <button type="button" class="link-btn" onclick="document.getElementById('edit-project-${task.id}').classList.toggle('hidden')">+ Add Project</button>
+          </div>
+          <textarea id="edit-note-${task.id}" class="task-extra-input ${task.note ? '' : 'hidden'}" placeholder="Some notes...">${task.note}</textarea>
+          <input type="text" id="edit-project-${task.id}" class="task-extra-input ${task.project ? '' : 'hidden'}" placeholder="Project name (e.g. Work)" value="${task.project}">
         </div>
-        <div class="task-right-group">
-          ${countDisplay}
-          <button class="task-opt-menu" onclick="deleteTask('${task.id}')" title="Delete Task">⋮</button>
+        <div class="task-form-actions">
+          <button type="button" class="text-btn danger-text" onclick="deleteTask('${task.id}')">🗑️ Delete</button>
+          <div class="action-right-group">
+            <button type="button" class="text-btn" onclick="cancelEdit()">Cancel</button>
+            <button type="button" class="solid-btn" onclick="saveEdit('${task.id}')">Save</button>
+          </div>
         </div>
-      </div>
-    `;
+      `;
+    } else {
+      // TAMPILAN NORMAL (Klik area untuk Edit)
+      li.addEventListener('click', (e) => {
+        if(!e.target.closest('.custom-checkbox')) {
+          activeTaskId = task.id;
+          editingTaskId = task.id; // Buka mode Edit
+          saveTasks();
+          renderTasks();
+        }
+      });
 
-    if (task.note) {
-      htmlContent += `<div class="task-note-box">${task.note.replace(/\n/g, '<br>')}</div>`;
+      const countDisplay = task.estPomodoros ? `<span class="task-pomo-count">${task.completedPomodoros || 0} / ${task.estPomodoros}</span>` : '';
+      const checkIcon = task.isCompleted ? '✓' : '';
+      const projectTag = task.project ? `<span class="task-project-tag">${task.project}</span>` : '';
+
+      let htmlContent = `
+        <div class="task-main-row">
+          <div class="task-info-group">
+            <div class="custom-checkbox" onclick="toggleTaskComplete('${task.id}')" title="Mark as done">${checkIcon}</div>
+            <span class="task-title-text">${task.title} ${projectTag}</span>
+          </div>
+          <div class="task-right-group">
+            ${countDisplay}
+          </div>
+        </div>
+      `;
+
+      if (task.note) { htmlContent += `<div class="task-note-box">${task.note.replace(/\n/g, '<br>')}</div>`; }
+      li.innerHTML = htmlContent;
     }
-
-    li.innerHTML = htmlContent;
     taskList.appendChild(li);
   });
 
   updateTaskSummary();
 }
 
+window.cancelEdit = function() { editingTaskId = null; renderTasks(); }
+
+window.saveEdit = function(id) {
+  const taskIndex = tasks.findIndex(t => t.id === id);
+  if (taskIndex !== -1) {
+    const titleVal = document.getElementById(`edit-title-${id}`).value.trim();
+    if (!titleVal) return alert("Task title cannot be empty!");
+    
+    const estVal = document.getElementById(`edit-est-${id}`).value;
+    tasks[taskIndex].title = titleVal;
+    tasks[taskIndex].estPomodoros = estVal ? parseInt(estVal) : null;
+    tasks[taskIndex].note = document.getElementById(`edit-note-${id}`).value.trim();
+    tasks[taskIndex].project = document.getElementById(`edit-project-${id}`).value.trim();
+  }
+  editingTaskId = null; saveTasks(); renderTasks();
+}
+
 window.toggleTaskComplete = function(id) {
   const task = tasks.find(t => t.id === id);
-  if (task) {
-    task.isCompleted = !task.isCompleted;
-    saveTasks();
-    renderTasks();
-  }
+  if (task) { task.isCompleted = !task.isCompleted; saveTasks(); renderTasks(); }
 }
 
 window.deleteTask = function(id) {
   if(confirm("Are you sure you want to delete this task?")) {
     tasks = tasks.filter(t => t.id !== id);
     if (activeTaskId === id) activeTaskId = null;
-    saveTasks();
-    renderTasks();
+    if (editingTaskId === id) editingTaskId = null;
+    saveTasks(); renderTasks();
   }
 }
 
-btnResetAll.addEventListener('click', () => {
-  if (confirm("Reset ALL tasks, session, and stats?")) {
-    tasks = [];
-    activeTaskId = null;
-    saveTasks();
-    renderTasks();
-    
-    dailyStats = { date: new Date().toDateString(), sessions: 0, minutes: 0 };
-    saveDailyStats();
-    
-    pauseTimer();
-    timerState.phase = 'work';
-    timerState.completedWorkSessions = 0;
-    timerState.remainingSeconds = CONFIG[timerState.intensity].work;
-    saveTimerState();
-    updateDisplay();
-  }
-});
-
 function updateTaskSummary() {
-  let totalEst = 0;
-  let completedEst = 0;
-  let remainingEst = 0;
-
+  let totalEst = 0; let completedEst = 0; let remainingEst = 0;
   tasks.forEach(t => {
-    const est = t.estPomodoros || 0;
-    totalEst += est;
-    if (t.isCompleted) {
-      completedEst += est;
-    } else {
-      remainingEst += est;
-    }
+    const est = t.estPomodoros || 0; totalEst += est;
+    if (t.isCompleted) { completedEst += est; } else { remainingEst += est; }
   });
 
   summaryPomos.innerHTML = `Pomos: <strong>${completedEst} / ${totalEst}</strong>`;
@@ -500,13 +371,10 @@ function updateTaskSummary() {
   if (remainingEst > 0) {
     const workSecs = CONFIG[timerState.intensity].work;
     const shortBreakSecs = CONFIG[timerState.intensity].shortBreak;
-    
     let totalSecs = 0;
     for (let i = 0; i < remainingEst; i++) {
-      totalSecs += workSecs;
-      if (i < remainingEst - 1) totalSecs += shortBreakSecs; 
+      totalSecs += workSecs; if (i < remainingEst - 1) totalSecs += shortBreakSecs; 
     }
-    
     const finishDate = new Date(Date.now() + totalSecs * 1000);
     const hours = finishDate.getHours().toString().padStart(2, '0');
     const mins = finishDate.getMinutes().toString().padStart(2, '0');
@@ -518,9 +386,6 @@ function updateTaskSummary() {
   }
 }
 
-function saveTasks() {
-  localStorage.setItem('tasks', JSON.stringify(tasks));
-  localStorage.setItem('activeTaskId', activeTaskId || '');
-}
+function saveTasks() { localStorage.setItem('tasks', JSON.stringify(tasks)); localStorage.setItem('activeTaskId', activeTaskId || ''); }
 
 init();
