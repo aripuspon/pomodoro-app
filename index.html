@@ -58,12 +58,12 @@
         </button>
 
         <div id="add-task-container" class="add-task-container hidden">
-          <input type="text" id="task-title" placeholder="What are you working on?" autocomplete="off" required>
+          <input type="text" id="task-title" class="task-title-input" placeholder="What are you working on?" autocomplete="off" required>
           
           <div class="task-form-details">
             <div class="est-pomo-wrapper">
               <label>Est Pomodoros</label>
-              <input type="number" id="task-est" min="1" step="1" placeholder="1" title="Optional">
+              <input type="number" id="task-est" class="task-est-input" min="1" step="1" placeholder="1" title="Optional">
             </div>
             
             <div class="extra-fields-toggles">
@@ -71,13 +71,16 @@
               <button type="button" id="btn-add-project" class="link-btn">+ Add Project</button>
             </div>
 
-            <textarea id="task-note" class="hidden task-extra-input" placeholder="Some notes..."></textarea>
-            <input type="text" id="task-project" class="hidden task-extra-input" placeholder="Project name (e.g. Work)"></textarea>
+            <textarea id="task-note" class="task-extra-input hidden" placeholder="Some notes..."></textarea>
+            <input type="text" id="task-project" class="task-extra-input hidden" placeholder="Project name (e.g. Work)"></input>
           </div>
 
           <div class="task-form-actions">
-            <button type="button" id="btn-cancel-task" class="text-btn">Cancel</button>
-            <button type="button" id="btn-save-task" class="solid-btn">Save</button>
+            <div></div> 
+            <div class="action-right-group">
+              <button type="button" id="btn-cancel-task" class="text-btn">Cancel</button>
+              <button type="button" id="btn-save-task" class="solid-btn">Save</button>
+            </div>
           </div>
         </div>
 
