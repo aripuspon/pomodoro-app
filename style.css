@@ -59,9 +59,9 @@ header { display: flex; justify-content: space-between; align-items: center; mar
 
 /* Task Menu Dropdown */
 .dropdown-wrapper { position: relative; }
-.task-dropdown-menu { position: absolute; right: 0; top: 35px; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); list-style: none; padding: 8px 0; min-width: 210px; z-index: 50; display: flex; flex-direction: column; }
+.task-dropdown-menu { position: absolute; right: 0; top: 35px; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); list-style: none; padding: 8px 0; min-width: 220px; z-index: 50; display: flex; flex-direction: column; }
 .task-dropdown-menu.hidden { display: none; }
-.task-dropdown-menu li { padding: 10px 15px; font-size: 0.95rem; cursor: pointer; color: var(--text-main); display: flex; align-items: center; gap: 10px; font-weight: 500; }
+.task-dropdown-menu li { padding: 10px 15px; font-size: 0.95rem; cursor: pointer; color: var(--text-main); display: flex; align-items: center; gap: 10px; font-weight: 500; white-space: nowrap; }
 .task-dropdown-menu li:hover { background-color: var(--bg-color); }
 
 /* Daftar Task */
