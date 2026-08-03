@@ -16,12 +16,14 @@
     </header>
 
     <main>
+      <!-- Intensity Modes -->
       <div class="intensity-modes">
         <button class="mode-btn active" data-intensity="1" title="Standard: 25m Work / 5m Break">Standard (25m)</button>
         <button class="mode-btn" data-intensity="2" title="Double: 50m Work / 10m Break">Double (50m)</button>
         <button class="mode-btn" data-intensity="3" title="Triple: 75m Work / 15m Break">Triple (75m)</button>
       </div>
 
+      <!-- Timer Card -->
       <section class="timer-card">
         <h2 id="timer-phase">Work Phase (Session 1)</h2>
         <div class="time-display" id="time-display">25:00</div>
@@ -34,6 +36,7 @@
         </div>
       </section>
 
+      <!-- Task Management -->
       <section class="task-section">
         <div class="task-header-main">
           <h3>Tasks</h3>
@@ -42,12 +45,15 @@
         <hr class="task-divider">
 
         <ul id="task-list" class="task-list">
-          </ul>
+          <!-- Tasks injected via JS -->
+        </ul>
 
+        <!-- Tombol Add Task Dashed -->
         <button id="btn-show-add-task" class="dashed-btn">
           <span class="plus-icon">⊕</span> Add Task
         </button>
 
+        <!-- Form Add Task Melayang (Hidden default) -->
         <div id="add-task-container" class="add-task-container hidden">
           <input type="text" id="task-title" placeholder="What are you working on?" autocomplete="off" required>
           
@@ -63,7 +69,7 @@
             </div>
 
             <textarea id="task-note" class="hidden task-extra-input" placeholder="Some notes..."></textarea>
-            <input type="text" id="task-project" class="hidden task-extra-input" placeholder="Project name (e.g. Work)">
+            <input type="text" id="task-project" class="hidden task-extra-input" placeholder="Project name (e.g. Work)"></textarea>
           </div>
 
           <div class="task-form-actions">
@@ -72,12 +78,14 @@
           </div>
         </div>
 
+        <!-- Footer Summary Time -->
         <div class="task-summary-footer">
           <span id="summary-pomos">Pomos: <strong>0 / 0</strong></span>
           <span id="summary-finish">Finish At: <strong>--:--</strong> (0h)</span>
         </div>
       </section>
 
+      <!-- Daily Statistics -->
       <section class="stats-card">
         <h3>Today's Statistics</h3>
         <div class="stats-grid">
@@ -92,6 +100,7 @@
         </div>
       </section>
 
+      <!-- Settings Dropdown -->
       <details class="settings-accordion" title="Click to open settings">
         <summary>Settings</summary>
         <div class="settings-content">
@@ -112,6 +121,12 @@
             <label class="toggle-label" title="Automatically start breaks when work finishes">
               <input type="checkbox" id="toggle-autostart">
               <span>Auto-start Breaks</span>
+            </label>
+          </div>
+          <div class="settings-row">
+            <label class="toggle-label" title="Automatically start work when break finishes">
+              <input type="checkbox" id="toggle-autostart-work">
+              <span>Auto-start Pomodoros</span>
             </label>
           </div>
         </div>
