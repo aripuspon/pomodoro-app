@@ -35,19 +35,47 @@
       </section>
 
       <section class="task-section">
-        <div class="task-header">
-          <h3>Task List</h3>
-          <button id="btn-reset-all" class="small-btn danger" title="Reset tasks, session, and stats">Reset All</button>
+        <div class="task-header-main">
+          <h3>Tasks</h3>
+          <button id="btn-reset-all" class="task-opt-btn" title="Reset all tasks, session, and stats">⋮</button>
         </div>
-        
-        <form id="task-form" class="task-form">
-          <input type="text" id="task-title" placeholder="What are you working on?" required autocomplete="off" title="Enter task name">
-          <input type="number" id="task-est" min="1" max="10" placeholder="Est. Pomo" title="Estimated Pomodoros needed (Optional)">
-          <button type="submit" class="add-btn" title="Add Task">Add</button>
-        </form>
+        <hr class="task-divider">
 
         <ul id="task-list" class="task-list">
           </ul>
+
+        <button id="btn-show-add-task" class="dashed-btn">
+          <span class="plus-icon">⊕</span> Add Task
+        </button>
+
+        <div id="add-task-container" class="add-task-container hidden">
+          <input type="text" id="task-title" placeholder="What are you working on?" autocomplete="off" required>
+          
+          <div class="task-form-details">
+            <div class="est-pomo-wrapper">
+              <label>Est Pomodoros</label>
+              <input type="number" id="task-est" min="1" step="1" placeholder="1" title="Optional">
+            </div>
+            
+            <div class="extra-fields-toggles">
+              <button type="button" id="btn-add-note" class="link-btn">+ Add Note</button>
+              <button type="button" id="btn-add-project" class="link-btn">+ Add Project</button>
+            </div>
+
+            <textarea id="task-note" class="hidden task-extra-input" placeholder="Some notes..."></textarea>
+            <input type="text" id="task-project" class="hidden task-extra-input" placeholder="Project name (e.g. Work)">
+          </div>
+
+          <div class="task-form-actions">
+            <button type="button" id="btn-cancel-task" class="text-btn">Cancel</button>
+            <button type="button" id="btn-save-task" class="solid-btn">Save</button>
+          </div>
+        </div>
+
+        <div class="task-summary-footer">
+          <span id="summary-pomos">Pomos: <strong>0 / 0</strong></span>
+          <span id="summary-finish">Finish At: <strong>--:--</strong> (0h)</span>
+        </div>
       </section>
 
       <section class="stats-card">
@@ -74,14 +102,12 @@
               <button id="btn-test-sound" class="small-btn" title="Test alarm sound">Test</button>
             </div>
           </div>
-
           <div class="settings-row">
             <label class="toggle-label" title="Show desktop pop-ups when timer finishes">
               <input type="checkbox" id="toggle-notif">
               <span>Desktop Notifications</span>
             </label>
           </div>
-
           <div class="settings-row">
             <label class="toggle-label" title="Automatically start breaks when work finishes">
               <input type="checkbox" id="toggle-autostart">
