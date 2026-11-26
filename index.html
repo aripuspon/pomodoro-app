@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light" data-phase="work">
+<html lang="en" data-theme="light" data-phase="work" data-palette="classic" data-timer-layout="clean" data-timer-font="sans" data-backdrop="glow" data-density="comfortable" data-motion="full">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Pomodoro Clock</title>
+  <link id="app-favicon" rel="icon" type="image/png" href="">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -21,13 +22,37 @@
         <h1>Pomodoro</h1>
       </div>
       <div class="header-controls">
+        <button type="button" id="btn-pip-timer" class="header-pill-btn" title="Pop out Always-on-Top Mini Timer" aria-label="Pop out Mini Timer" aria-pressed="false">
+          <span class="btn-icon" aria-hidden="true">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="2" y="4" width="20" height="16" rx="2"></rect>
+              <rect x="11" y="11" width="9" height="7" rx="1.2" fill="currentColor" fill-opacity="0.2"></rect>
+            </svg>
+          </span>
+          <span class="hide-on-mobile">Mini Timer</span>
+        </button>
+        <button type="button" id="btn-zen-mode" class="header-pill-btn" title="Enter Zen Focus Mode (Z)" aria-label="Enter Zen Focus Mode" aria-pressed="false">
+          <span class="btn-icon" aria-hidden="true">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="15 3 21 3 21 9"></polyline>
+              <polyline points="9 21 3 21 3 15"></polyline>
+              <line x1="21" y1="3" x2="14" y2="10"></line>
+              <line x1="3" y1="21" x2="10" y2="14"></line>
+            </svg>
+          </span>
+          <span class="hide-on-mobile">Zen Mode</span>
+        </button>
+        <button type="button" id="btn-appearance" class="header-pill-btn" title="Customize Themes &amp; Visuals" aria-label="Customize Themes &amp; Visuals">
+          <span id="appearance-swatch-dot" class="appearance-swatch-dot" aria-hidden="true"></span>
+          <span class="hide-on-mobile">Themes</span>
+        </button>
         <button type="button" id="theme-toggle" class="header-pill-btn" title="Toggle Dark/Light Theme">
           <span id="theme-toggle-icon" class="btn-icon" aria-hidden="true">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
             </svg>
           </span>
-          <span id="theme-toggle-label">Dark Mode</span>
+          <span id="theme-toggle-label" class="hide-on-mobile">Dark Mode</span>
         </button>
       </div>
     </header>
@@ -61,13 +86,35 @@
           </div>
 
           <h2 id="timer-phase">Work Phase (Session 1 · 1/4)</h2>
-          <div class="time-display" id="time-display">25:00</div>
+          <div id="timer-clock-wrap" class="timer-clock-wrap">
+            <svg id="timer-ring-svg" class="timer-ring-svg" viewBox="0 0 240 240" aria-hidden="true">
+              <circle class="timer-ring-track" cx="120" cy="120" r="106"></circle>
+              <circle id="timer-ring-progress" class="timer-ring-progress" cx="120" cy="120" r="106"></circle>
+            </svg>
+            <div class="time-display" id="time-display">25:00</div>
+          </div>
 
           <button type="button" id="active-task-badge" class="active-task-pill is-empty" title="Active focus task">
             <span class="active-task-dot" aria-hidden="true"></span>
             <span class="active-task-prefix">Focusing on:</span>
             <span id="active-task-name" class="active-task-name">No task selected</span>
           </button>
+
+          <div id="session-intent-wrap" class="session-intent-wrap">
+            <span class="session-intent-icon" aria-hidden="true">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="9"></circle>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+            </span>
+            <input type="text" id="session-intent-input" class="session-intent-input" maxlength="90" placeholder="Optional win for this session..." aria-label="Session intent" autocomplete="off">
+            <button type="button" id="btn-clear-intent" class="session-intent-clear hidden" title="Clear session intent" aria-label="Clear session intent">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          </div>
 
           <div class="timer-controls">
             <button type="button" id="btn-reset" class="icon-control-btn" title="Reset current phase" aria-label="Reset current phase">
@@ -92,7 +139,11 @@
             </button>
           </div>
 
-          <div class="ambient-bar" aria-label="Ambient Focus Audio">
+          <div id="pip-status-msg" class="inline-info-pill hidden" role="status" aria-live="polite"></div>
+          <div id="focus-checkin-banner" class="focus-checkin-card hidden" aria-live="polite"></div>
+          <div id="break-recovery-card" class="break-recovery-card hidden" aria-live="polite"></div>
+
+          <div class="ambient-bar" aria-label="Sound Studio Controls">
             <div class="ambient-select-group">
               <span class="ambient-icon" aria-hidden="true">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -101,17 +152,13 @@
                   <path d="M3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"></path>
                 </svg>
               </span>
-              <label for="ambient-select" class="ambient-label">Soundscape</label>
-              <select id="ambient-select" class="ambient-select" title="Choose background ambient sound">
+              <label for="ambient-select" class="ambient-label">Sound</label>
+              <select id="ambient-select" class="ambient-select" title="Choose soundscape or preset">
                 <option value="off">Off</option>
-                <option value="white">Lo-fi White</option>
-                <option value="pink">Pink Noise</option>
-                <option value="rain">Gentle Rain</option>
-                <option value="cafe">Cafe Murmur</option>
               </select>
             </div>
             <div class="ambient-controls-group">
-              <input type="range" id="ambient-volume" min="0" max="1" step="0.05" value="0.35" title="Ambient volume" aria-label="Ambient volume">
+              <input type="range" id="ambient-volume" min="0" max="1" step="0.05" value="0.35" title="Master ambient volume" aria-label="Master ambient volume">
               <button type="button" id="btn-ambient-toggle" class="small-btn ambient-play-btn" disabled>
                 <span id="ambient-toggle-icon" class="btn-icon" aria-hidden="true">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none">
@@ -120,7 +167,41 @@
                 </span>
                 <span id="ambient-toggle-label">Play</span>
               </button>
+              <button type="button" id="btn-sound-studio" class="small-btn icon-label-btn studio-toggle-btn" title="Open Sound Studio multi-layer mixer" aria-expanded="false" aria-controls="sound-studio-panel">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <line x1="4" y1="21" x2="4" y2="14"></line>
+                  <line x1="4" y1="10" x2="4" y2="3"></line>
+                  <line x1="12" y1="21" x2="12" y2="12"></line>
+                  <line x1="12" y1="8" x2="12" y2="3"></line>
+                  <line x1="20" y1="21" x2="20" y2="16"></line>
+                  <line x1="20" y1="12" x2="20" y2="3"></line>
+                  <line x1="1" y1="14" x2="7" y2="14"></line>
+                  <line x1="9" y1="8" x2="15" y2="8"></line>
+                  <line x1="17" y1="16" x2="23" y2="16"></line>
+                </svg>
+                <span>Studio</span>
+                <span id="studio-layer-badge" class="studio-layer-badge hidden">0</span>
+              </button>
             </div>
+          </div>
+
+          <div id="sound-studio-panel" class="sound-studio-panel hidden" aria-label="Sound Studio Mixer">
+            <div class="studio-header">
+              <span class="studio-title">Sound Studio Mixer</span>
+              <div class="studio-header-actions">
+                <button type="button" id="btn-studio-save-preset" class="small-btn" title="Save current mix as a preset">+ Save Mix</button>
+                <button type="button" id="btn-studio-clear" class="small-btn" title="Turn off all layers">Clear</button>
+              </div>
+            </div>
+
+            <div id="studio-save-row" class="studio-save-row hidden">
+              <input type="text" id="studio-preset-name" class="studio-preset-input" maxlength="28" placeholder="Preset name (e.g. Late Night)" autocomplete="off">
+              <button type="button" id="btn-studio-confirm-save" class="solid-btn studio-save-confirm">Save</button>
+              <button type="button" id="btn-studio-cancel-save" class="text-btn studio-save-cancel">Cancel</button>
+            </div>
+
+            <div id="studio-presets-row" class="studio-presets-row" aria-label="Audio Presets"></div>
+            <div id="studio-mixer-grid" class="studio-mixer-grid"></div>
           </div>
         </section>
 
@@ -184,6 +265,12 @@
             </div>
           </div>
 
+          <div class="task-bucket-tabs" role="tablist" aria-label="Task Plan View">
+            <button type="button" class="task-bucket-tab active" role="tab" aria-selected="true" data-bucket="today">Today <span id="bucket-count-today" class="bucket-count">0</span></button>
+            <button type="button" class="task-bucket-tab" role="tab" aria-selected="false" data-bucket="backlog">Backlog <span id="bucket-count-backlog" class="bucket-count">0</span></button>
+            <button type="button" class="task-bucket-tab" role="tab" aria-selected="false" data-bucket="all">All</button>
+          </div>
+
           <ul id="task-list" class="task-list"></ul>
 
           <button type="button" id="btn-show-add-task" class="dashed-btn">
@@ -199,16 +286,36 @@
             <input type="text" id="task-title" class="task-title-input" placeholder="What are you working on?" autocomplete="off" required>
 
             <div class="task-form-details">
-              <div class="est-pomo-wrapper">
-                <label for="task-est">Est Pomodoros</label>
-                <input type="number" id="task-est" class="task-est-input" min="1" step="1" placeholder="1" title="Optional">
+              <div class="task-planning-row">
+                <div class="est-pomo-wrapper">
+                  <label for="task-est">Est Pomodoros</label>
+                  <input type="number" id="task-est" class="task-est-input" min="1" step="1" placeholder="1" title="Optional">
+                </div>
+                <div class="est-pomo-wrapper">
+                  <label for="task-bucket">Plan</label>
+                  <select id="task-bucket" class="settings-select task-plan-select" title="Assign to Today or Backlog">
+                    <option value="today">Today</option>
+                    <option value="backlog">Backlog</option>
+                  </select>
+                </div>
+                <div class="est-pomo-wrapper">
+                  <label for="task-recurrence">Repeat</label>
+                  <select id="task-recurrence" class="settings-select task-plan-select" title="Auto-repeat completed task on schedule">
+                    <option value="none">One-time</option>
+                    <option value="daily">Daily</option>
+                    <option value="weekdays">Weekdays</option>
+                    <option value="weekly">Weekly</option>
+                  </select>
+                </div>
               </div>
 
               <div class="extra-fields-toggles">
+                <button type="button" id="btn-add-subtasks" class="link-btn">+ Subtasks</button>
                 <button type="button" id="btn-add-note" class="link-btn">+ Add Note</button>
                 <button type="button" id="btn-add-project" class="link-btn">+ Add Project</button>
               </div>
 
+              <textarea id="task-subtasks" class="task-extra-input hidden" placeholder="Subtasks (one step per line)..."></textarea>
               <textarea id="task-note" class="task-extra-input hidden" placeholder="Some notes..."></textarea>
               <input type="text" id="task-project" class="task-extra-input hidden" placeholder="Project name (e.g. Work)">
             </div>
@@ -225,6 +332,30 @@
           <div class="task-summary-footer">
             <span id="summary-pomos">Pomos: <strong>0 / 0</strong></span>
             <span id="summary-finish">Finish At: <strong>--:--</strong> (0h)</span>
+            <button type="button" id="btn-toggle-timeline" class="small-btn icon-label-btn" aria-expanded="false" title="Show today's visual time-blocking timeline">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="3" y="4" width="18" height="18" rx="2"></rect>
+                <line x1="16" y1="2" x2="16" y2="6"></line>
+                <line x1="8" y1="2" x2="8" y2="6"></line>
+                <line x1="3" y1="10" x2="21" y2="10"></line>
+              </svg>
+              <span>Schedule</span>
+            </button>
+          </div>
+
+          <div id="day-timeline-panel" class="day-timeline-panel hidden" aria-label="Time-Blocking Day Schedule">
+            <div class="timeline-blocker-row">
+              <label class="toggle-label timeline-blocker-toggle" title="Reserve a lunch or calendar break around which Pomodoros are scheduled">
+                <input type="checkbox" id="toggle-break-block">
+                <span>Block Break</span>
+              </label>
+              <div class="timeline-blocker-inputs">
+                <input type="time" id="break-block-start" value="12:00" aria-label="Blocked break start time" title="Start time">
+                <input type="number" id="break-block-mins" min="5" max="240" step="5" value="45" aria-label="Blocked break duration in minutes" title="Duration (mins)">
+                <span class="timeline-mins-unit">m</span>
+              </div>
+            </div>
+            <ul id="day-timeline-list" class="day-timeline-list"></ul>
           </div>
         </section>
       </div>
@@ -232,11 +363,25 @@
       <div class="secondary-column">
         <section class="stats-card">
           <div class="analytics-header">
-            <h3>Analytics &amp; Daily Review</h3>
+            <h3>Analytics &amp; Review</h3>
             <div class="analytics-range-tabs" role="tablist" aria-label="Analytics Range">
               <button type="button" class="range-tab active" role="tab" aria-selected="true" data-range="today">Today</button>
-              <button type="button" class="range-tab" role="tab" aria-selected="false" data-range="week">7 Days</button>
+              <button type="button" class="range-tab" role="tab" aria-selected="false" data-range="week">7D</button>
+              <button type="button" class="range-tab" role="tab" aria-selected="false" data-range="month">30D</button>
+              <button type="button" class="range-tab" role="tab" aria-selected="false" data-range="year">Year</button>
+              <button type="button" class="range-tab" role="tab" aria-selected="false" data-range="custom">Custom</button>
             </div>
+          </div>
+
+          <div id="custom-range-bar" class="custom-range-bar hidden" aria-label="Custom Date Range">
+            <label class="custom-date-field">
+              <span>From</span>
+              <input type="date" id="analytics-date-from">
+            </label>
+            <label class="custom-date-field">
+              <span>To</span>
+              <input type="date" id="analytics-date-to">
+            </label>
           </div>
 
           <div class="stats-grid">
@@ -263,6 +408,9 @@
               <div id="goal-progress-bar" class="goal-progress-bar"></div>
             </div>
           </div>
+
+          <div id="focus-quality-bar" class="focus-quality-bar hidden" aria-live="polite"></div>
+          <div id="pro-insights-bar" class="pro-insights-bar hidden" aria-live="polite"></div>
 
           <div class="analytics-subcard">
             <div class="analytics-subcard-header">
@@ -295,6 +443,14 @@
                 <span id="session-log-label">Session Log (0)</span>
               </button>
               <div class="export-actions">
+                <button type="button" id="btn-export-timesheet" class="small-btn icon-label-btn" title="Export project summary timesheet CSV for selected range">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <rect x="3" y="4" width="18" height="16" rx="2"></rect>
+                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                    <line x1="9" y1="4" x2="9" y2="20"></line>
+                  </svg>
+                  <span>Timesheet</span>
+                </button>
                 <button type="button" id="btn-export-csv" class="small-btn icon-label-btn" title="Export completed session logs as CSV">
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -318,7 +474,7 @@
           </div>
         </section>
 
-        <details class="settings-accordion" title="Click to open settings">
+        <details id="settings-accordion" class="settings-accordion" title="Click to open settings">
           <summary class="settings-summary">
             <span class="settings-summary-left">
               <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -333,6 +489,70 @@
           </summary>
 
           <div class="settings-content">
+            <div id="appearance-settings-group" class="settings-group appearance-settings-group">
+              <div class="settings-group-label">Appearance &amp; Visuals</div>
+              <div class="settings-row settings-row-col">
+                <span class="settings-sublabel">Color Theme</span>
+                <div id="palette-picker" class="palette-picker" role="group" aria-label="Color Theme">
+                  <button type="button" class="palette-btn active" data-palette="classic" aria-pressed="true" title="Pomodoro Classic">
+                    <span class="palette-dot palette-dot-classic" aria-hidden="true"></span>
+                    <span>Pomodoro</span>
+                  </button>
+                  <button type="button" class="palette-btn" data-palette="nordic" aria-pressed="false" title="Nordic Indigo">
+                    <span class="palette-dot palette-dot-nordic" aria-hidden="true"></span>
+                    <span>Nordic</span>
+                  </button>
+                  <button type="button" class="palette-btn" data-palette="matcha" aria-pressed="false" title="Matcha Botanical">
+                    <span class="palette-dot palette-dot-matcha" aria-hidden="true"></span>
+                    <span>Matcha</span>
+                  </button>
+                  <button type="button" class="palette-btn" data-palette="sunset" aria-pressed="false" title="Amber Dusk">
+                    <span class="palette-dot palette-dot-sunset" aria-hidden="true"></span>
+                    <span>Sunset</span>
+                  </button>
+                  <button type="button" class="palette-btn" data-palette="mono" aria-pressed="false" title="Minimal Ink">
+                    <span class="palette-dot palette-dot-mono" aria-hidden="true"></span>
+                    <span>Minimal</span>
+                  </button>
+                </div>
+              </div>
+              <div class="settings-row settings-row-wrap">
+                <span class="settings-sublabel">Clock Display</span>
+                <div id="timer-layout-picker" class="segmented-choice" role="group" aria-label="Clock Display">
+                  <button type="button" class="choice-btn active" data-timer-layout="clean" aria-pressed="true">Clean</button>
+                  <button type="button" class="choice-btn" data-timer-layout="ring" aria-pressed="false">Ring</button>
+                </div>
+              </div>
+              <div class="settings-row settings-row-wrap">
+                <span class="settings-sublabel">Clock Font</span>
+                <div id="timer-font-picker" class="segmented-choice" role="group" aria-label="Clock Font">
+                  <button type="button" class="choice-btn active" data-timer-font="sans" aria-pressed="true">Sans</button>
+                  <button type="button" class="choice-btn" data-timer-font="mono" aria-pressed="false">Mono</button>
+                  <button type="button" class="choice-btn" data-timer-font="serif" aria-pressed="false">Serif</button>
+                </div>
+              </div>
+              <div class="settings-row settings-row-wrap">
+                <span class="settings-sublabel">Backdrop</span>
+                <div id="backdrop-style-picker" class="segmented-choice" role="group" aria-label="Backdrop Style">
+                  <button type="button" class="choice-btn active" data-backdrop="glow" aria-pressed="true">Soft Glow</button>
+                  <button type="button" class="choice-btn" data-backdrop="aurora" aria-pressed="false">Aurora</button>
+                  <button type="button" class="choice-btn" data-backdrop="minimal" aria-pressed="false">Flat</button>
+                </div>
+              </div>
+              <div class="settings-row">
+                <label class="toggle-label" title="Tighten card padding and gaps for compact viewports">
+                  <input type="checkbox" id="toggle-compact-ui">
+                  <span>Compact Layout</span>
+                </label>
+              </div>
+              <div class="settings-row">
+                <label class="toggle-label" title="Disable decorative transitions, glow pulses, and breathing scale motion">
+                  <input type="checkbox" id="toggle-reduced-motion">
+                  <span>Reduce Motion</span>
+                </label>
+              </div>
+            </div>
+
             <div class="settings-group">
               <div class="settings-group-label">Timer Durations</div>
               <div class="settings-row">
@@ -391,6 +611,18 @@
                   <span>Ambient During Work Only</span>
                 </label>
               </div>
+              <div class="settings-row">
+                <label class="toggle-label" title="Gently fade ambient sound in and out on start or pause">
+                  <input type="checkbox" id="toggle-ambient-fade">
+                  <span>Smooth Fade In / Out</span>
+                </label>
+              </div>
+              <div class="settings-row">
+                <label class="toggle-label" title="Lower ambient sound temporarily when the alert chime plays">
+                  <input type="checkbox" id="toggle-ambient-duck">
+                  <span>Duck Audio on Alert Chime</span>
+                </label>
+              </div>
             </div>
 
             <div class="settings-group">
@@ -398,6 +630,24 @@
               <div class="settings-row">
                 <label for="setting-daily-goal">Daily Focus Goal (pomos)</label>
                 <input type="number" id="setting-daily-goal" class="small-number-input" min="1" max="30" step="1" value="6" title="Target work sessions per day for streak and progress">
+              </div>
+              <div class="settings-row settings-row-col">
+                <span class="settings-sublabel">Rest Days (Won't break your streak)</span>
+                <div id="rest-days-selector" class="rest-days-selector" role="group" aria-label="Rest Days">
+                  <button type="button" class="rest-day-btn" data-day="0" aria-pressed="false">Sun</button>
+                  <button type="button" class="rest-day-btn" data-day="1" aria-pressed="false">Mon</button>
+                  <button type="button" class="rest-day-btn" data-day="2" aria-pressed="false">Tue</button>
+                  <button type="button" class="rest-day-btn" data-day="3" aria-pressed="false">Wed</button>
+                  <button type="button" class="rest-day-btn" data-day="4" aria-pressed="false">Thu</button>
+                  <button type="button" class="rest-day-btn" data-day="5" aria-pressed="false">Fri</button>
+                  <button type="button" class="rest-day-btn" data-day="6" aria-pressed="false">Sat</button>
+                </div>
+              </div>
+              <div class="settings-row">
+                <label class="toggle-label" title="Bridge up to 1 missed workday every 7 days automatically">
+                  <input type="checkbox" id="toggle-streak-freeze">
+                  <span>Auto Streak Freeze (1/wk)</span>
+                </label>
               </div>
               <div class="settings-row">
                 <label class="toggle-label" title="Show desktop pop-ups when timer finishes">
@@ -423,11 +673,142 @@
                   <span>Auto-switch Active Task</span>
                 </label>
               </div>
+              <div class="settings-row">
+                <label class="toggle-label" title="Show 4-7-8 breathing, 20-20-20 eye rest, and stretch prompts during breaks">
+                  <input type="checkbox" id="toggle-guided-breaks">
+                  <span>Guided Break Exercises</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="settings-group">
+              <div class="settings-group-label">Workspace Backup</div>
+              <div class="settings-row settings-row-wrap">
+                <span class="settings-sublabel">Export or restore all tasks, settings &amp; history</span>
+                <div class="workspace-backup-actions">
+                  <button type="button" id="btn-backup-workspace" class="small-btn icon-label-btn" title="Download full JSON backup of tasks, settings, and analytics">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                      <polyline points="7 10 12 15 17 10"></polyline>
+                      <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                    <span>Backup</span>
+                  </button>
+                  <button type="button" id="btn-restore-workspace" class="small-btn icon-label-btn" title="Restore tasks, settings, and analytics from a .json backup">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                      <polyline points="17 8 12 3 7 8"></polyline>
+                      <line x1="12" y1="3" x2="12" y2="15"></line>
+                    </svg>
+                    <span>Restore</span>
+                  </button>
+                  <input type="file" id="workspace-restore-input" class="hidden" accept=".json,application/json">
+                </div>
+              </div>
+              <div id="workspace-backup-status" class="export-status hidden" aria-live="polite"></div>
             </div>
           </div>
         </details>
       </div>
     </main>
+  </div>
+
+  <!-- Zen Full-Screen Focus Overlay -->
+  <div id="zen-overlay" class="zen-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="zen-phase-label">
+    <div class="zen-progress-track">
+      <div id="zen-progress-bar" class="zen-progress-bar"></div>
+    </div>
+
+    <div class="zen-topbar">
+      <div class="zen-phase-tabs" role="tablist" aria-label="Zen Phase">
+        <button type="button" class="zen-phase-tab active" data-phase="work">Work</button>
+        <button type="button" class="zen-phase-tab" data-phase="shortBreak">Short Break</button>
+        <button type="button" class="zen-phase-tab" data-phase="longBreak">Long Break</button>
+      </div>
+      <div class="zen-topbar-actions">
+        <button type="button" id="zen-btn-ambient" class="header-pill-btn" title="Toggle Soundscape">
+          <span class="btn-icon" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 18v-6a9 9 0 0 1 18 0v6"></path>
+              <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3z"></path>
+              <path d="M3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"></path>
+            </svg>
+          </span>
+          <span id="zen-ambient-label">Sound: Off</span>
+        </button>
+        <button type="button" id="zen-btn-pip" class="header-pill-btn" title="Pop out Mini Timer">
+          <span class="btn-icon" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="2" y="4" width="20" height="16" rx="2"></rect>
+              <rect x="11" y="11" width="9" height="7" rx="1.2" fill="currentColor" fill-opacity="0.2"></rect>
+            </svg>
+          </span>
+          <span class="hide-on-mobile">Mini</span>
+        </button>
+        <button type="button" id="zen-btn-fullscreen" class="header-pill-btn" title="Toggle Browser Fullscreen">
+          <span class="btn-icon" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+            </svg>
+          </span>
+          <span id="zen-fullscreen-label" class="hide-on-mobile">Fullscreen</span>
+        </button>
+        <button type="button" id="zen-btn-exit" class="header-pill-btn zen-exit-btn" title="Exit Zen Mode (Esc)" aria-label="Exit Zen Mode">
+          <span class="btn-icon" aria-hidden="true">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </span>
+          <span>Exit</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="zen-stage">
+      <div id="zen-phase-label" class="zen-phase-label">Work Phase (Session 1 · 1/4)</div>
+      <div class="zen-clock-wrap">
+        <svg id="zen-ring-svg" class="timer-ring-svg zen-ring-svg" viewBox="0 0 320 320" aria-hidden="true">
+          <circle class="timer-ring-track" cx="160" cy="160" r="146"></circle>
+          <circle id="zen-ring-progress" class="timer-ring-progress" cx="160" cy="160" r="146"></circle>
+        </svg>
+        <div id="zen-time-display" class="zen-time-display">25:00</div>
+      </div>
+
+      <div id="zen-task-pill" class="active-task-pill is-empty zen-task-pill">
+        <span class="active-task-dot" aria-hidden="true"></span>
+        <span class="active-task-prefix">Focusing on:</span>
+        <span id="zen-task-name" class="active-task-name">No task selected</span>
+      </div>
+
+      <p id="zen-intent-display" class="zen-intent-display hidden"></p>
+
+      <div class="zen-controls">
+        <button type="button" id="zen-btn-reset" class="icon-control-btn" title="Reset current phase" aria-label="Reset current phase">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M3 12a9 9 0 1 0 3-6.7L3 8"></path>
+            <path d="M3 3v5h5"></path>
+          </svg>
+        </button>
+        <button type="button" id="zen-btn-toggle" class="primary-timer-btn zen-primary-btn" title="Start Timer (Space)" aria-pressed="false">
+          <span id="zen-toggle-icon" class="btn-icon" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+              <polygon points="6 4 20 12 6 20 6 4"></polygon>
+            </svg>
+          </span>
+          <span id="zen-toggle-label">Start</span>
+        </button>
+        <button type="button" id="zen-btn-skip" class="icon-control-btn" title="Skip to next phase" aria-label="Skip to next phase">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polygon points="5 4 15 12 5 20 5 4"></polygon>
+            <line x1="19" y1="5" x2="19" y2="19"></line>
+          </svg>
+        </button>
+      </div>
+
+      <div id="zen-checkin-banner" class="focus-checkin-card zen-subcard hidden" aria-live="polite"></div>
+      <div id="zen-break-guide" class="break-recovery-card zen-subcard hidden" aria-live="polite"></div>
+    </div>
   </div>
 
   <script src="app.js"></script>
