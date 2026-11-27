@@ -94,14 +94,20 @@ async function verifyAccessToken(accessToken, env, fetchImpl = fetch) {
 }
 
 async function supabaseRest(path, options = {}, env, userToken, fetchImpl = fetch) {
+  const isOpaqueSecretKey = Boolean(env.serviceRoleKey && env.serviceRoleKey.startsWith('sb_secret_'));
   const apiKey = env.serviceRoleKey || env.supabaseAnonKey;
-  const authHeader = env.serviceRoleKey ? `Bearer ${env.serviceRoleKey}` : `Bearer ${userToken}`;
   const headers = {
     apikey: apiKey,
-    Authorization: authHeader,
     'Content-Type': 'application/json',
     ...(options.headers || {})
   };
+  if (env.serviceRoleKey) {
+    if (!isOpaqueSecretKey) {
+      headers.Authorization = `Bearer ${env.serviceRoleKey}`;
+    }
+  } else if (userToken) {
+    headers.Authorization = `Bearer ${userToken}`;
+  }
 
   const res = await fetchImpl(`${env.supabaseUrl}/rest/v1/${path}`, {
     method: options.method || 'GET',

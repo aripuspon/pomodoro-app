@@ -1,11 +1,5 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "rewrites": [
-    {
-      "source": "/cloud-config.json",
-      "destination": "/api/config"
-    }
-  ],
   "headers": [
     {
       "source": "/api/(.*)",
@@ -18,7 +12,8 @@
       "source": "/cloud-config.json",
       "headers": [
         { "key": "Cache-Control", "value": "no-store, max-age=0" },
-        { "key": "X-Content-Type-Options", "value": "nosniff" }
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "X-Cloud-Runtime", "value": "vercel" }
       ]
     },
     {

@@ -343,14 +343,29 @@
 
     try {
       const res = await fetch('./cloud-config.json', { cache: 'no-store' });
-      if (res.ok) {
-        const data = await res.json();
-        if (data && typeof data === 'object') {
-          cloudConfig = { ...cloudConfig, ...data };
-          entitlement.softBetaMode = cloudConfig.softBetaMode !== false;
-          if (!entitlement.paidPlanActive) {
-            entitlement.hasProAccess = entitlement.softBetaMode;
-          }
+      let data = null;
+      const isVercelRuntime = Boolean(
+        res.headers &&
+        typeof res.headers.get === 'function' &&
+        res.headers.get('x-cloud-runtime') === 'vercel'
+      );
+
+      if (isVercelRuntime) {
+        const apiRes = await fetch('/api/config', { cache: 'no-store' });
+        if (apiRes.ok) {
+          data = await apiRes.json();
+        }
+      }
+
+      if (!data && res.ok) {
+        data = await res.json();
+      }
+
+      if (data && typeof data === 'object') {
+        cloudConfig = { ...cloudConfig, ...data };
+        entitlement.softBetaMode = cloudConfig.softBetaMode !== false;
+        if (!entitlement.paidPlanActive) {
+          entitlement.hasProAccess = entitlement.softBetaMode;
         }
       }
     } catch {
