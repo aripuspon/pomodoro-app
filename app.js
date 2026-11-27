@@ -288,7 +288,6 @@ let editingTaskId = null; // Menyimpan ID tugas yang sedang di-edit
 let selectedProjectFilter = '';
 let activeTaskBucket = 'today';
 let isTimelineOpen = false;
-let backupStatusTimeout = null;
 let theme = safeGetStorage('theme') || 'light';
 
 let timerState = loadJSON('timerState', {
@@ -1210,10 +1209,6 @@ const toggleAutoSwitchTask = document.getElementById('toggle-autoswitch-task');
 const toggleGuidedBreaks = document.getElementById('toggle-guided-breaks');
 const toggleStreakFreeze = document.getElementById('toggle-streak-freeze');
 const restDayBtns = document.querySelectorAll('.rest-day-btn');
-const btnBackupWorkspace = document.getElementById('btn-backup-workspace');
-const btnRestoreWorkspace = document.getElementById('btn-restore-workspace');
-const workspaceRestoreInput = document.getElementById('workspace-restore-input');
-const workspaceBackupStatus = document.getElementById('workspace-backup-status');
 
 const zenOverlay = document.getElementById('zen-overlay');
 const zenProgressBar = document.getElementById('zen-progress-bar');
@@ -4708,17 +4703,7 @@ if (toggleBreakBlock) toggleBreakBlock.addEventListener('change', handleBlockedB
 if (breakBlockStart) breakBlockStart.addEventListener('change', handleBlockedBreakChange);
 if (breakBlockMins) breakBlockMins.addEventListener('change', handleBlockedBreakChange);
 
-// Full Workspace Backup & Restore
-function showBackupStatus(message) {
-  if (!workspaceBackupStatus) return;
-  workspaceBackupStatus.textContent = message;
-  workspaceBackupStatus.classList.remove('hidden');
-  clearTimeout(backupStatusTimeout);
-  backupStatusTimeout = setTimeout(() => {
-    workspaceBackupStatus.classList.add('hidden');
-  }, 4500);
-}
-
+// Workspace Snapshot & Cloud Sync Helpers
 function buildWorkspaceSnapshot() {
   return {
     schema: 'pomodoro-workspace-v2',
@@ -4799,14 +4784,8 @@ function mergeWorkspaceSnapshots(localSnap, cloudSnap) {
   };
 }
 
-function exportWorkspaceBackup() {
-  const payload = buildWorkspaceSnapshot();
-  downloadFile(`pomodoro-workspace-${getLocalDateKey()}.json`, JSON.stringify(payload, null, 2), 'application/json;charset=utf-8;');
-  showBackupStatus(`Downloaded backup (${tasks.length} tasks, ${sessionHistory.length} sessions).`);
-}
-
 function applyWorkspaceBackupPayload(rawObj, options = {}) {
-  const { silent = false, skipCloudPush = false } = options;
+  const { skipCloudPush = false } = options;
   if (!rawObj || typeof rawObj !== 'object' || Array.isArray(rawObj)) {
     throw new Error('Invalid backup format.');
   }
@@ -4851,37 +4830,10 @@ function applyWorkspaceBackupPayload(rawObj, options = {}) {
     editingTaskId = null;
     selectedProjectFilter = '';
     init();
-    if (!silent) {
-      showBackupStatus(`Restored workspace (${tasks.length} tasks, ${sessionHistory.length} sessions).`);
-    }
   } finally {
     suppressCloudSync = prevSuppress;
   }
   if (!skipCloudPush) notifyWorkspaceChanged('restore');
-}
-
-if (btnBackupWorkspace) btnBackupWorkspace.addEventListener('click', exportWorkspaceBackup);
-if (btnRestoreWorkspace && workspaceRestoreInput) {
-  btnRestoreWorkspace.addEventListener('click', () => {
-    workspaceRestoreInput.value = '';
-    workspaceRestoreInput.click();
-  });
-  workspaceRestoreInput.addEventListener('change', (e) => {
-    const file = e.target.files && e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      try {
-        const parsed = JSON.parse(String(reader.result || ''));
-        if (!confirm('Restore workspace from this backup? This will replace your current tasks, settings, and history.')) return;
-        applyWorkspaceBackupPayload(parsed);
-      } catch (err) {
-        showBackupStatus(`Restore failed: ${err?.message || 'Invalid JSON file'}`);
-      }
-    };
-    reader.onerror = () => showBackupStatus('Restore failed: Could not read file.');
-    reader.readAsText(file);
-  });
 }
 
 // Background sync on tab focus or wake-up from sleep

@@ -30,7 +30,10 @@ async function getOrCreateProfile(authUser, env, accessToken) {
           id: authUser.id,
           email: authUser.email || null,
           display_name: String(defaultName).slice(0, 60),
-          avatar_url: authUser.user_metadata?.avatar_url || null
+          avatar_url: authUser.user_metadata?.avatar_url || null,
+          plan: 'pro',
+          plan_status: 'trialing',
+          current_period_end: new Date(Date.now() + 3 * 86400000).toISOString()
         }
       },
       env,

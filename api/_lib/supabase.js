@@ -137,21 +137,30 @@ function computeEntitlement(profile, env) {
   const planStatus = typeof profile?.plan_status === 'string' ? profile.plan_status : 'inactive';
   const periodEndMs = profile?.current_period_end ? Date.parse(profile.current_period_end) : null;
   const activePeriod = !periodEndMs || (Number.isFinite(periodEndMs) && periodEndMs > Date.now());
+  const isTrialing = (plan === 'pro' && planStatus === 'trialing' && activePeriod);
   const paidPlanActive =
     (plan === 'lifetime') ||
-    (plan === 'pro' && ['active', 'trialing'].includes(planStatus) && activePeriod);
+    (plan === 'pro' && planStatus === 'active' && activePeriod);
 
-  const hasProAccess = paidPlanActive || Boolean(env.softBetaMode);
+  const hasProAccess = paidPlanActive || isTrialing || Boolean(env.softBetaMode);
+  const trialEndsAt = isTrialing ? (profile?.current_period_end || null) : null;
+  const trialDaysLeft = isTrialing && periodEndMs
+    ? Math.max(1, Math.ceil((periodEndMs - Date.now()) / 86400000))
+    : 0;
+
   return {
     plan,
     planStatus,
     hasProAccess,
     paidPlanActive,
+    isTrialing,
+    trialEndsAt,
+    trialDaysLeft,
     softBetaMode: Boolean(env.softBetaMode),
     canCloudSync: true,
     billingProvider: profile?.billing_provider || null,
     currentPeriodEnd: profile?.current_period_end || null,
-    source: paidPlanActive ? 'subscription' : (env.softBetaMode ? 'soft_beta' : 'free')
+    source: paidPlanActive ? 'subscription' : (isTrialing ? 'trial' : (env.softBetaMode ? 'soft_beta' : 'free'))
   };
 }
 

@@ -15,9 +15,12 @@ create table if not exists public.profiles (
   provider_customer_id text,
   provider_subscription_id text,
   current_period_end timestamptz,
+  trial_used boolean not null default false,
   created_at timestamptz not null default timezone('utc', now()),
   updated_at timestamptz not null default timezone('utc', now())
 );
+
+alter table public.profiles add column if not exists trial_used boolean not null default false;
 
 create index if not exists profiles_email_idx on public.profiles (email);
 
@@ -69,7 +72,8 @@ begin
        or new.billing_provider is distinct from old.billing_provider
        or new.provider_customer_id is distinct from old.provider_customer_id
        or new.provider_subscription_id is distinct from old.provider_subscription_id
-       or new.current_period_end is distinct from old.current_period_end then
+       or new.current_period_end is distinct from old.current_period_end
+       or new.trial_used is distinct from old.trial_used then
       raise exception 'Billing and plan fields can only be modified by server webhooks';
     end if;
   end if;
@@ -90,12 +94,16 @@ security definer
 set search_path = public
 as $$
 begin
-  insert into public.profiles (id, email, display_name, avatar_url)
+  insert into public.profiles (id, email, display_name, avatar_url, plan, plan_status, current_period_end, trial_used)
   values (
     new.id,
     new.email,
     coalesce(new.raw_user_meta_data ->> 'full_name', new.raw_user_meta_data ->> 'name', split_part(coalesce(new.email, ''), '@', 1)),
-    new.raw_user_meta_data ->> 'avatar_url'
+    new.raw_user_meta_data ->> 'avatar_url',
+    'pro',
+    'trialing',
+    timezone('utc', now()) + interval '3 days',
+    true
   )
   on conflict (id) do update
     set email = excluded.email;

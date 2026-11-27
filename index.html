@@ -705,33 +705,6 @@
               </div>
               <div id="settings-sync-status" class="settings-sync-meta">Local storage active (Vercel + Supabase optional for cloud sync)</div>
             </div>
-
-            <div class="settings-group">
-              <div class="settings-group-label">Workspace Backup</div>
-              <div class="settings-row settings-row-wrap">
-                <span class="settings-sublabel">Export or restore all tasks, settings &amp; history</span>
-                <div class="workspace-backup-actions">
-                  <button type="button" id="btn-backup-workspace" class="small-btn icon-label-btn" title="Download full JSON backup of tasks, settings, and analytics">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                      <polyline points="7 10 12 15 17 10"></polyline>
-                      <line x1="12" y1="15" x2="12" y2="3"></line>
-                    </svg>
-                    <span>Backup</span>
-                  </button>
-                  <button type="button" id="btn-restore-workspace" class="small-btn icon-label-btn" title="Restore tasks, settings, and analytics from a .json backup">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                      <polyline points="17 8 12 3 7 8"></polyline>
-                      <line x1="12" y1="3" x2="12" y2="15"></line>
-                    </svg>
-                    <span>Restore</span>
-                  </button>
-                  <input type="file" id="workspace-restore-input" class="hidden" accept=".json,application/json">
-                </div>
-              </div>
-              <div id="workspace-backup-status" class="export-status hidden" aria-live="polite"></div>
-            </div>
           </div>
         </details>
       </div>
@@ -975,11 +948,11 @@
             <li>Pomodoro &amp; Custom Timers</li>
             <li>Today Task List &amp; Notes</li>
             <li>Today &amp; 7-Day Stats</li>
-            <li>JSON File Backup &amp; Restore</li>
+            <li>Export Analytics Logs (CSV / JSON)</li>
           </ul>
         </div>
         <div class="plan-card is-pro">
-          <div class="plan-tier-badge">Full Focus Suite</div>
+          <div class="plan-tier-badge">3-Day Free Trial &middot; No Card</div>
           <div class="plan-tier-name">Pro</div>
           <div class="plan-price">$5 <span>/ month (Planned)</span></div>
           <ul class="plan-features-list">
@@ -994,8 +967,8 @@
       </div>
 
       <div class="upgrade-modal-footer">
-        <button type="button" id="btn-upgrade-cta" class="primary-timer-btn upgrade-cta-btn">Create Account for Free Beta + Sync</button>
-        <p id="upgrade-cta-note" class="upgrade-cta-note">No credit card needed now. Billing checkout will attach here when enabled.</p>
+        <button type="button" id="btn-upgrade-cta" class="primary-timer-btn upgrade-cta-btn">Start 3-Day Free Pro Trial (No Card)</button>
+        <p id="upgrade-cta-note" class="upgrade-cta-note">Try all Pro features free for 3 days &mdash; no credit card required.</p>
         <div class="upgrade-legal-links">
           <a href="./terms.html" target="_blank" rel="noopener">Terms of Service</a>
           <span aria-hidden="true">&middot;</span>

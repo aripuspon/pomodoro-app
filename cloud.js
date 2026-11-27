@@ -182,8 +182,10 @@
 
   function getPlanLabel() {
     if (entitlement.plan === 'lifetime') return 'Lifetime Pro';
-    if (entitlement.plan === 'pro' && ['active', 'trialing'].includes(entitlement.planStatus)) {
-      return 'Pro Active';
+    if (entitlement.paidPlanActive) return 'Pro Active';
+    if (entitlement.isTrialing) {
+      const days = Number(entitlement.trialDaysLeft) || 1;
+      return `Pro Trial · ${days}d left`;
     }
     if (entitlement.softBetaMode) return 'Free · Beta Access';
     return 'Free Plan';
@@ -259,20 +261,28 @@
     }
 
     if (upgradePlanStatus) {
-      upgradePlanStatus.innerHTML = entitlement.paidPlanActive
-        ? `<strong>${getPlanLabel()}:</strong> All Pro capabilities and Cloud Sync are active on your account.`
-        : (entitlement.softBetaMode
-          ? '<strong>Soft Beta Access Active:</strong> All Pro features are currently unlocked while subscription billing is finalized.'
-          : '<strong>Free Plan:</strong> Upgrade to Pro to unlock Cloud Sync and full suite capabilities.');
+      if (entitlement.paidPlanActive) {
+        upgradePlanStatus.innerHTML = `<strong>${getPlanLabel()}:</strong> All Pro capabilities and Cloud Sync are active on your account.`;
+      } else if (entitlement.isTrialing) {
+        const days = Number(entitlement.trialDaysLeft) || 1;
+        upgradePlanStatus.innerHTML = `<strong>Pro Trial Active (${days}d left):</strong> Try all Pro features and Cloud Sync free &mdash; no credit card required.`;
+      } else if (entitlement.softBetaMode) {
+        upgradePlanStatus.innerHTML = '<strong>Soft Beta Access Active:</strong> All Pro features are currently unlocked while subscription billing is finalized.';
+      } else {
+        upgradePlanStatus.innerHTML = '<strong>Free Plan:</strong> Upgrade to Pro to unlock Cloud Sync and the full focus suite.';
+      }
     }
 
     if (btnUpgradeCta && upgradeCtaNote) {
       if (!isSignedIn) {
-        btnUpgradeCta.textContent = cloudConfig.configured ? 'Sign In / Create Account (Free Beta)' : 'Open Account Setup';
-        upgradeCtaNote.textContent = 'Create an account to prepare for Cloud Sync. Payment checkout connects later.';
+        btnUpgradeCta.textContent = 'Start 3-Day Free Pro Trial (No Card)';
+        upgradeCtaNote.textContent = 'Try all Pro features & Cloud Sync free for 3 days. No credit card required.';
       } else if (entitlement.paidPlanActive) {
         btnUpgradeCta.textContent = 'Pro Active on Account';
-        upgradeCtaNote.textContent = 'Thank you for supporting Pomodoro!';
+        upgradeCtaNote.textContent = 'Thank you for supporting PomoNow!';
+      } else if (entitlement.isTrialing) {
+        btnUpgradeCta.textContent = 'Billing Coming Soon (Trial Active)';
+        upgradeCtaNote.textContent = 'No surprise auto-charge after Day 3. Subscriptions are final once billed.';
       } else {
         btnUpgradeCta.textContent = entitlement.softBetaMode ? 'Billing Coming Soon (Beta Unlocked)' : 'Upgrade Coming Soon';
         upgradeCtaNote.textContent = 'Payment checkout (Lemon Squeezy / Paddle / QRIS) will attach right here when enabled.';
