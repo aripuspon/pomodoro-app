@@ -1,0 +1,10 @@
+{
+  "configured": false,
+  "softBetaMode": true,
+  "mode": "static",
+  "features": {
+    "auth": false,
+    "cloudSync": false,
+    "billingReady": false
+  }
+}

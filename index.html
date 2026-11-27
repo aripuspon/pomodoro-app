@@ -54,6 +54,16 @@
           </span>
           <span id="theme-toggle-label" class="hide-on-mobile">Dark Mode</span>
         </button>
+        <button type="button" id="btn-account" class="header-pill-btn account-pill-btn" title="Account, Cloud Sync &amp; Plan" aria-label="Account and Cloud Sync">
+          <span id="account-status-dot" class="account-status-dot" aria-hidden="true"></span>
+          <span class="btn-icon" aria-hidden="true">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+          </span>
+          <span id="account-btn-label" class="hide-on-mobile">Sign In</span>
+        </button>
       </div>
     </header>
 
@@ -682,6 +692,21 @@
             </div>
 
             <div class="settings-group">
+              <div class="settings-group-label">Account &amp; Plan</div>
+              <div class="settings-row settings-row-wrap">
+                <div class="settings-account-summary">
+                  <span id="settings-account-email" class="settings-sublabel">Guest Mode (Local only)</span>
+                  <span id="settings-plan-badge" class="plan-pill-badge">Free · Beta Access</span>
+                </div>
+                <div class="workspace-backup-actions">
+                  <button type="button" id="btn-settings-account" class="small-btn">Account / Sync</button>
+                  <button type="button" id="btn-open-upgrade" class="small-btn plan-upgrade-trigger">Plans</button>
+                </div>
+              </div>
+              <div id="settings-sync-status" class="settings-sync-meta">Local storage active (Vercel + Supabase optional for cloud sync)</div>
+            </div>
+
+            <div class="settings-group">
               <div class="settings-group-label">Workspace Backup</div>
               <div class="settings-row settings-row-wrap">
                 <span class="settings-sublabel">Export or restore all tasks, settings &amp; history</span>
@@ -811,6 +836,159 @@
     </div>
   </div>
 
+  <!-- Account & Cloud Sync Modal -->
+  <div id="account-modal" class="saas-modal hidden" role="dialog" aria-modal="true" aria-labelledby="account-modal-title">
+    <div id="account-modal-backdrop" class="saas-modal-backdrop"></div>
+    <div class="saas-modal-card">
+      <div class="saas-modal-header">
+        <h2 id="account-modal-title">Account &amp; Cloud Sync</h2>
+        <button type="button" id="account-modal-close" class="saas-modal-close" aria-label="Close account dialog">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <div id="cloud-setup-notice" class="cloud-notice-box hidden">
+        <strong>Local Mode Active:</strong> Connect your Supabase &amp; Vercel keys using <code>SUPABASE_VERCEL_SETUP.md</code> to enable live sign-in and cross-device cloud sync. Your data continues saving safely in this browser.
+      </div>
+
+      <div id="auth-panel-guest">
+        <div id="auth-mode-tabs" class="segmented-choice auth-mode-tabs" role="tablist" aria-label="Authentication Mode">
+          <button type="button" class="choice-btn active" role="tab" aria-selected="true" data-auth-mode="signin">Sign In</button>
+          <button type="button" class="choice-btn" role="tab" aria-selected="false" data-auth-mode="signup">Create Account</button>
+          <button type="button" class="choice-btn" role="tab" aria-selected="false" data-auth-mode="magic">Magic Link</button>
+        </div>
+
+        <form id="auth-form" class="auth-form">
+          <label class="auth-field-label" for="auth-email">Email</label>
+          <input type="email" id="auth-email" class="auth-input" placeholder="you@example.com" required autocomplete="email">
+
+          <div id="auth-password-wrap">
+            <label class="auth-field-label" for="auth-password">Password</label>
+            <input type="password" id="auth-password" class="auth-input" placeholder="Minimum 6 characters" minlength="6" autocomplete="current-password">
+          </div>
+
+          <button type="submit" id="btn-auth-submit" class="primary-timer-btn auth-submit-btn">Sign In</button>
+        </form>
+
+        <div class="auth-divider"><span>or</span></div>
+
+        <button type="button" id="btn-auth-google" class="google-auth-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+            <path fill="#EA4335" d="M12 10.2v3.9h5.5c-.2 1.3-1.5 3.9-5.5 3.9-3.3 0-6-2.7-6-6s2.7-6 6-6c1.9 0 3.1.8 3.8 1.5l2.6-2.5C16.7 3.4 14.6 2.5 12 2.5 6.8 2.5 2.5 6.8 2.5 12s4.3 9.5 9.5 9.5c5.5 0 9.1-3.8 9.1-9.2 0-.6-.1-1.1-.2-1.6H12z"/>
+          </svg>
+          <span>Continue with Google</span>
+        </button>
+      </div>
+
+      <div id="auth-panel-user" class="hidden">
+        <div class="account-profile-header">
+          <div id="account-avatar" class="account-avatar">U</div>
+          <div class="account-profile-meta">
+            <div id="account-user-email" class="account-user-email">user@example.com</div>
+            <div class="account-badge-row">
+              <span id="account-plan-badge" class="plan-pill-badge">Free · Beta Access</span>
+              <button type="button" id="btn-account-plans" class="text-btn small-link-btn">View Plans</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="auth-profile-edit">
+          <label class="auth-field-label" for="account-display-name">Display Name</label>
+          <div class="auth-inline-row">
+            <input type="text" id="account-display-name" class="auth-input" maxlength="60" placeholder="Your name">
+            <button type="button" id="btn-save-profile" class="small-btn">Save</button>
+          </div>
+        </div>
+
+        <div class="cloud-sync-card">
+          <div class="cloud-sync-card-head">
+            <span class="studio-title">Multi-Device Sync</span>
+            <span id="cloud-sync-summary" class="cloud-sync-state">Synced</span>
+          </div>
+          <div id="cloud-sync-detail" class="cloud-sync-detail">No cloud snapshot uploaded yet.</div>
+          <div class="cloud-sync-actions">
+            <button type="button" id="btn-cloud-sync-now" class="small-btn">Sync Now</button>
+            <button type="button" id="btn-cloud-pull" class="small-btn">Restore from Cloud</button>
+          </div>
+        </div>
+
+        <div id="sync-conflict-box" class="sync-conflict-box hidden" role="alert">
+          <div class="sync-conflict-title">Both this browser and Cloud have saved workspaces</div>
+          <p class="sync-conflict-copy">Choose how to combine your tasks, sessions, and preferences:</p>
+          <div class="sync-conflict-actions">
+            <button type="button" id="btn-sync-merge" class="solid-btn small-solid-btn">Merge Both</button>
+            <button type="button" id="btn-sync-use-cloud" class="small-btn">Use Cloud</button>
+            <button type="button" id="btn-sync-keep-local" class="small-btn">Keep This Device</button>
+          </div>
+        </div>
+
+        <div class="account-footer-actions">
+          <button type="button" id="btn-auth-signout" class="small-btn danger-outline-btn">Sign Out</button>
+        </div>
+      </div>
+
+      <div id="auth-feedback" class="auth-feedback hidden" role="status" aria-live="polite"></div>
+    </div>
+  </div>
+
+  <!-- Pro Plans & Subscription Preview Modal -->
+  <div id="upgrade-modal" class="saas-modal hidden" role="dialog" aria-modal="true" aria-labelledby="upgrade-modal-title">
+    <div id="upgrade-modal-backdrop" class="saas-modal-backdrop"></div>
+    <div class="saas-modal-card saas-modal-wide">
+      <div class="saas-modal-header">
+        <div>
+          <h2 id="upgrade-modal-title">Pomodoro Pro &amp; Cloud</h2>
+          <p class="saas-modal-subtitle">Built for deep-work pros with multi-device cloud sync.</p>
+        </div>
+        <button type="button" id="upgrade-modal-close" class="saas-modal-close" aria-label="Close plans dialog">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <div id="upgrade-plan-status" class="beta-status-banner">
+        <strong>Soft Beta Access Active:</strong> All Pro features are currently unlocked while subscription billing is finalized.
+      </div>
+
+      <div class="plans-grid">
+        <div class="plan-card">
+          <div class="plan-tier-name">Free</div>
+          <div class="plan-price">$0 <span>/ forever</span></div>
+          <ul class="plan-features-list">
+            <li>Pomodoro &amp; Custom Timers</li>
+            <li>Today Task List &amp; Notes</li>
+            <li>Today &amp; 7-Day Stats</li>
+            <li>JSON File Backup &amp; Restore</li>
+          </ul>
+        </div>
+        <div class="plan-card is-pro">
+          <div class="plan-tier-badge">Full Focus Suite</div>
+          <div class="plan-tier-name">Pro</div>
+          <div class="plan-price">$5 <span>/ month (Planned)</span></div>
+          <ul class="plan-features-list">
+            <li>Multi-Device Cloud Sync (Supabase)</li>
+            <li>Mini Timer (PiP) &amp; Fullscreen Zen Mode</li>
+            <li>8-Track Sound Studio &amp; Saved Mixes</li>
+            <li>365-Day Heatmap, Pro Insights &amp; Timesheets</li>
+            <li>Backlog, Subtasks, Recurrence &amp; Day Timeline</li>
+            <li>Nordic, Matcha, Sunset &amp; Minimal Themes + Ring</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="upgrade-modal-footer">
+        <button type="button" id="btn-upgrade-cta" class="primary-timer-btn upgrade-cta-btn">Create Account for Free Beta + Sync</button>
+        <p id="upgrade-cta-note" class="upgrade-cta-note">No credit card needed now. Billing checkout will attach here when enabled.</p>
+      </div>
+    </div>
+  </div>
+
   <script src="app.js"></script>
+  <script src="cloud.js"></script>
 </body>
 </html>

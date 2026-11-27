@@ -1268,7 +1268,18 @@ const analyticsExportStatusEl = document.getElementById('analytics-export-status
 const sessionLogListEl = document.getElementById('session-log-list');
 
 // --- INITIALIZATION ---
+let suppressCloudSync = false;
+
+function notifyWorkspaceChanged(reason = 'update') {
+  if (suppressCloudSync) return;
+  if (typeof window !== 'undefined' && window.PomodoroCloud && typeof window.PomodoroCloud.onWorkspaceChanged === 'function') {
+    window.PomodoroCloud.onWorkspaceChanged(reason);
+  }
+}
+
 function init() {
+  suppressCloudSync = true;
+  try {
   const fallbackPreset = PRESETS[timerState.intensity] || PRESETS[1];
   const rawDurations = appSettings.durations || {};
   appSettings.durations = {
@@ -1368,6 +1379,9 @@ function init() {
   }
   updateDisplay();
   renderBreakRecoveryContainers();
+  } finally {
+    suppressCloudSync = false;
+  }
 }
 
 function checkDailyStatsReset() {
@@ -1382,10 +1396,12 @@ function checkDailyStatsReset() {
 function saveDailyStats() {
   safeSetStorage('dailyStats', JSON.stringify(dailyStats));
   updateStatsDisplay();
+  notifyWorkspaceChanged('stats');
 }
 
 function saveSessionHistory() {
   safeSetStorage('sessionHistory', JSON.stringify(sessionHistory));
+  notifyWorkspaceChanged('sessions');
 }
 
 function recordCompletedSession(minutes, task, intentText = '') {
@@ -2253,6 +2269,7 @@ function syncRestDayButtons() {
 
 function saveSettings() {
   safeSetStorage('appSettings', JSON.stringify(appSettings));
+  notifyWorkspaceChanged('settings');
 }
 
 function bindDurationInput(inputEl, phaseKey) {
@@ -2750,6 +2767,7 @@ function applyVisualSettings() {
   if (pipCanvasEl && document.pictureInPictureElement === pipVideoEl) {
     drawCanvasPipFrame();
   }
+  notifyWorkspaceChanged('theme');
 }
 
 function bindButtonChoiceGroup(btns, datasetKey, validValues, settingKey) {
@@ -2813,6 +2831,7 @@ function applyTheme(selectedTheme) {
   if (pipCanvasEl && document.pictureInPictureElement === pipVideoEl) {
     drawCanvasPipFrame();
   }
+  notifyWorkspaceChanged('theme');
 }
 themeToggleBtn.addEventListener('click', () => applyTheme(theme === 'light' ? 'dark' : 'light'));
 
@@ -3823,6 +3842,9 @@ phaseTabBtns.forEach(btn => {
 // Keyboard Shortcuts
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
+    if (typeof window !== 'undefined' && window.PomodoroCloud && typeof window.PomodoroCloud.closeTopModal === 'function' && window.PomodoroCloud.closeTopModal()) {
+      return;
+    }
     if (isZenOpen) {
       closeZenMode();
     } else if (!taskDropdownMenu.classList.contains('hidden')) {
@@ -4697,8 +4719,8 @@ function showBackupStatus(message) {
   }, 4500);
 }
 
-function exportWorkspaceBackup() {
-  const payload = {
+function buildWorkspaceSnapshot() {
+  return {
     schema: 'pomodoro-workspace-v2',
     exportedAt: new Date().toISOString(),
     theme,
@@ -4708,11 +4730,83 @@ function exportWorkspaceBackup() {
     dailyStats,
     sessionHistory
   };
+}
+
+function mergeWorkspaceSnapshots(localSnap, cloudSnap) {
+  const localTasks = sanitizeTasks(localSnap?.tasks);
+  const cloudTasks = sanitizeTasks(cloudSnap?.tasks);
+  const taskMap = new Map();
+  cloudTasks.forEach(t => taskMap.set(t.id, t));
+  localTasks.forEach(lt => {
+    const ct = taskMap.get(lt.id);
+    if (!ct) {
+      taskMap.set(lt.id, lt);
+      return;
+    }
+    const mergedDone = Math.max(ct.completedPomodoros || 0, lt.completedPomodoros || 0);
+    taskMap.set(lt.id, {
+      ...ct,
+      ...lt,
+      completedPomodoros: mergedDone,
+      isCompleted: Boolean(ct.isCompleted || lt.isCompleted)
+    });
+  });
+
+  const localHist = sanitizeSessionHistory(localSnap?.sessionHistory);
+  const cloudHist = sanitizeSessionHistory(cloudSnap?.sessionHistory);
+  const histMap = new Map();
+  cloudHist.forEach(s => histMap.set(s.id, s));
+  localHist.forEach(s => histMap.set(s.id, s));
+  const mergedHistory = [...histMap.values()].sort((a, b) => a.completedAt - b.completedAt);
+
+  const todayStr = new Date().toDateString();
+  const lStats = localSnap?.dailyStats || {};
+  const cStats = cloudSnap?.dailyStats || {};
+  let mergedDaily = { date: todayStr, sessions: 0, minutes: 0 };
+  if (lStats.date === todayStr && cStats.date === todayStr) {
+    mergedDaily = {
+      date: todayStr,
+      sessions: Math.max(Number(lStats.sessions) || 0, Number(cStats.sessions) || 0),
+      minutes: Math.max(Number(lStats.minutes) || 0, Number(cStats.minutes) || 0)
+    };
+  } else if (lStats.date === todayStr) {
+    mergedDaily = { ...lStats };
+  } else if (cStats.date === todayStr) {
+    mergedDaily = { ...cStats };
+  }
+
+  const lApp = localSnap?.appSettings || {};
+  const cApp = cloudSnap?.appSettings || {};
+  const lHasSound = Object.values(lApp.soundMix || {}).some(v => Number(v) > 0);
+  const presetMap = new Map();
+  (Array.isArray(cApp.soundPresets) ? cApp.soundPresets : []).forEach(p => { if (p?.id) presetMap.set(p.id, p); });
+  (Array.isArray(lApp.soundPresets) ? lApp.soundPresets : []).forEach(p => { if (p?.id) presetMap.set(p.id, p); });
+
+  return {
+    schema: 'pomodoro-workspace-v2',
+    exportedAt: new Date().toISOString(),
+    theme: localSnap?.theme || cloudSnap?.theme || 'light',
+    tasks: [...taskMap.values()],
+    activeTaskId: localSnap?.activeTaskId || cloudSnap?.activeTaskId || null,
+    appSettings: {
+      ...cApp,
+      ...lApp,
+      soundMix: lHasSound ? (lApp.soundMix || {}) : (cApp.soundMix || {}),
+      soundPresets: [...presetMap.values()].slice(0, 8)
+    },
+    dailyStats: mergedDaily,
+    sessionHistory: mergedHistory
+  };
+}
+
+function exportWorkspaceBackup() {
+  const payload = buildWorkspaceSnapshot();
   downloadFile(`pomodoro-workspace-${getLocalDateKey()}.json`, JSON.stringify(payload, null, 2), 'application/json;charset=utf-8;');
   showBackupStatus(`Downloaded backup (${tasks.length} tasks, ${sessionHistory.length} sessions).`);
 }
 
-function applyWorkspaceBackupPayload(rawObj) {
+function applyWorkspaceBackupPayload(rawObj, options = {}) {
+  const { silent = false, skipCloudPush = false } = options;
   if (!rawObj || typeof rawObj !== 'object' || Array.isArray(rawObj)) {
     throw new Error('Invalid backup format.');
   }
@@ -4720,41 +4814,50 @@ function applyWorkspaceBackupPayload(rawObj) {
     throw new Error('Backup file does not contain recognizable workspace data.');
   }
 
-  if (Array.isArray(rawObj.tasks)) {
-    tasks = sanitizeTasks(rawObj.tasks);
-    activeTaskId = typeof rawObj.activeTaskId === 'string' && tasks.some(t => t.id === rawObj.activeTaskId)
-      ? rawObj.activeTaskId
-      : (tasks[0]?.id || null);
-    saveTasks();
-  }
+  const prevSuppress = suppressCloudSync;
+  if (skipCloudPush) suppressCloudSync = true;
+  try {
+    if (Array.isArray(rawObj.tasks)) {
+      tasks = sanitizeTasks(rawObj.tasks);
+      activeTaskId = typeof rawObj.activeTaskId === 'string' && tasks.some(t => t.id === rawObj.activeTaskId)
+        ? rawObj.activeTaskId
+        : (tasks[0]?.id || null);
+      saveTasks();
+    }
 
-  if (Array.isArray(rawObj.sessionHistory)) {
-    sessionHistory = sanitizeSessionHistory(rawObj.sessionHistory);
-    saveSessionHistory();
-  }
+    if (Array.isArray(rawObj.sessionHistory)) {
+      sessionHistory = sanitizeSessionHistory(rawObj.sessionHistory);
+      saveSessionHistory();
+    }
 
-  if (rawObj.dailyStats && typeof rawObj.dailyStats === 'object') {
-    dailyStats = {
-      date: typeof rawObj.dailyStats.date === 'string' ? rawObj.dailyStats.date : new Date().toDateString(),
-      sessions: clampWholeNumber(rawObj.dailyStats.sessions, 0, 1000, 0),
-      minutes: clampWholeNumber(rawObj.dailyStats.minutes, 0, 100000, 0)
-    };
-    safeSetStorage('dailyStats', JSON.stringify(dailyStats));
-  }
+    if (rawObj.dailyStats && typeof rawObj.dailyStats === 'object') {
+      dailyStats = {
+        date: typeof rawObj.dailyStats.date === 'string' ? rawObj.dailyStats.date : new Date().toDateString(),
+        sessions: clampWholeNumber(rawObj.dailyStats.sessions, 0, 1000, 0),
+        minutes: clampWholeNumber(rawObj.dailyStats.minutes, 0, 100000, 0)
+      };
+      safeSetStorage('dailyStats', JSON.stringify(dailyStats));
+    }
 
-  if (rawObj.appSettings && typeof rawObj.appSettings === 'object') {
-    appSettings = { ...appSettings, ...rawObj.appSettings };
-    saveSettings();
-  }
+    if (rawObj.appSettings && typeof rawObj.appSettings === 'object') {
+      appSettings = { ...appSettings, ...rawObj.appSettings };
+      saveSettings();
+    }
 
-  if (rawObj.theme === 'dark' || rawObj.theme === 'light') {
-    theme = rawObj.theme;
-  }
+    if (rawObj.theme === 'dark' || rawObj.theme === 'light') {
+      theme = rawObj.theme;
+    }
 
-  editingTaskId = null;
-  selectedProjectFilter = '';
-  init();
-  showBackupStatus(`Restored workspace (${tasks.length} tasks, ${sessionHistory.length} sessions).`);
+    editingTaskId = null;
+    selectedProjectFilter = '';
+    init();
+    if (!silent) {
+      showBackupStatus(`Restored workspace (${tasks.length} tasks, ${sessionHistory.length} sessions).`);
+    }
+  } finally {
+    suppressCloudSync = prevSuppress;
+  }
+  if (!skipCloudPush) notifyWorkspaceChanged('restore');
 }
 
 if (btnBackupWorkspace) btnBackupWorkspace.addEventListener('click', exportWorkspaceBackup);
@@ -4828,6 +4931,16 @@ function saveTasks() {
   if (editingTaskId && !tasks.some(t => t.id === editingTaskId)) editingTaskId = null;
   safeSetStorage('tasks', JSON.stringify(tasks));
   safeSetStorage('activeTaskId', activeTaskId || '');
+  notifyWorkspaceChanged('tasks');
+}
+
+if (typeof window !== 'undefined') {
+  window.PomodoroWorkspace = {
+    exportSnapshot: buildWorkspaceSnapshot,
+    applySnapshot: (payload) => applyWorkspaceBackupPayload(payload, { silent: true, skipCloudPush: true }),
+    mergeSnapshots: mergeWorkspaceSnapshots,
+    hasMeaningfulData: () => tasks.length > 0 || sessionHistory.length > 0 || dailyStats.sessions > 0
+  };
 }
 
 init();
