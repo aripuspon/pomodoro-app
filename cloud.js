@@ -49,6 +49,7 @@
   const settingsSyncStatus = document.getElementById('settings-sync-status');
   const btnSettingsAccount = document.getElementById('btn-settings-account');
   const btnOpenUpgrade = document.getElementById('btn-open-upgrade');
+  const btnFooterPlans = document.getElementById('btn-footer-plans');
 
   const accountModal = document.getElementById('account-modal');
   const accountModalBackdrop = document.getElementById('account-modal-backdrop');
@@ -694,6 +695,7 @@
   if (accountModalBackdrop) accountModalBackdrop.addEventListener('click', closeAccountModal);
 
   if (btnOpenUpgrade) btnOpenUpgrade.addEventListener('click', openUpgradeModal);
+  if (btnFooterPlans) btnFooterPlans.addEventListener('click', openUpgradeModal);
   if (btnAccountPlans) btnAccountPlans.addEventListener('click', openUpgradeModal);
   if (upgradeModalClose) upgradeModalClose.addEventListener('click', closeUpgradeModal);
   if (upgradeModalBackdrop) upgradeModalBackdrop.addEventListener('click', closeUpgradeModal);

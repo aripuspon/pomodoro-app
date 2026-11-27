@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" data-phase="work" data-palette="classic" data-backdrop="glow">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privacy Policy — PomoNow</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="legal-wrapper">
+    <header class="legal-header">
+      <a href="./index.html" class="header-pill-btn legal-back-link">
+        <span aria-hidden="true">&larr;</span>
+        <span>Back to PomoNow</span>
+      </a>
+      <button type="button" id="legal-theme-toggle" class="header-pill-btn" title="Toggle Dark/Light Theme">
+        <span id="legal-theme-label">Dark Mode</span>
+      </button>
+    </header>
+
+    <main class="legal-card">
+      <div class="legal-kicker">Privacy</div>
+      <h1 class="legal-title">Privacy Policy</h1>
+      <p class="legal-meta">Effective Date: November 27, 2026 &middot; Contact: <a href="mailto:aripuspondaru@gmail.com">aripuspondaru@gmail.com</a></p>
+
+      <div class="legal-callout">
+        <strong>Summary:</strong> PomoNow works locally in your browser without an account. If you choose to sign in for Cloud Sync, we only store your account email, optional display name, and your workspace data. We never sell your data or read your private Google files.
+      </div>
+
+      <section class="legal-section">
+        <h2>1. Guest Mode (Local-Only Storage)</h2>
+        <p>When you use PomoNow without signing in, your tasks, timer preferences, Sound Studio mixes, themes, and focus analytics stay solely inside your browser&rsquo;s <code>localStorage</code> and are not transmitted to our database.</p>
+      </section>
+
+      <section class="legal-section">
+        <h2>2. Data Collected When You Sign In</h2>
+        <ul>
+          <li><strong>Account Information:</strong> Your email address, optional display name, optional profile picture URL, and subscription plan status.</li>
+          <li><strong>Synced Workspace Data:</strong> Your tasks, subtasks, session logs, daily focus stats, and theme/timer settings stored so you can sync across devices.</li>
+        </ul>
+      </section>
+
+      <section class="legal-section">
+        <h2>3. Google Sign-In Disclosure</h2>
+        <p>If you choose <strong>Continue with Google</strong>, PomoNow requests only basic identity scopes (<code>email</code>, <code>name</code>, and <code>profile picture</code>) strictly to authenticate your account. We do <strong>not</strong> request access to Gmail, Google Drive, Google Calendar, or contacts, and we never sell or share your Google user data with advertisers or data brokers.</p>
+      </section>
+
+      <section class="legal-section">
+        <h2>4. Infrastructure &amp; Payment Providers</h2>
+        <p>To deliver PomoNow securely, we rely on trusted infrastructure providers:</p>
+        <ul>
+          <li><strong>Vercel:</strong> Static web hosting and serverless API execution.</li>
+          <li><strong>Supabase:</strong> User authentication and PostgreSQL cloud database with Row-Level Security so only your authenticated session can access your workspace.</li>
+          <li><strong>Payment Processors (When Enabled):</strong> Subscription checkouts and card/QRIS handling are processed by third-party payment providers. PomoNow never stores full credit card numbers on its servers.</li>
+        </ul>
+      </section>
+
+      <section class="legal-section">
+        <h2>5. Your Rights: Export &amp; Deletion</h2>
+        <ul>
+          <li><strong>Export Anytime:</strong> Download a complete JSON snapshot via <em>Settings &rarr; Workspace Backup</em> or export session logs as CSV/JSON in Analytics.</li>
+          <li><strong>Delete Your Account:</strong> Email <a href="mailto:aripuspondaru@gmail.com">aripuspondaru@gmail.com</a> from your account email address to request permanent deletion of your profile and synced workspace data. Deletion requests are completed within 7 days.</li>
+        </ul>
+      </section>
+    </main>
+
+    <footer class="legal-footer">
+      <span>PomoNow</span>
+      <nav class="footer-links" aria-label="Legal navigation">
+        <a href="./terms.html">Terms</a>
+        <a href="./privacy.html" aria-current="page">Privacy</a>
+        <a href="./refund.html">Refunds</a>
+        <a href="mailto:aripuspondaru@gmail.com">Support</a>
+      </nav>
+    </footer>
+  </div>
+  <script src="legal.js"></script>
+</body>
+</html>
