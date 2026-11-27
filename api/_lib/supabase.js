@@ -1,14 +1,19 @@
 const MAX_JSON_BODY_BYTES = 2 * 1024 * 1024;
 
 function readEnvConfig(env = process.env) {
-  const supabaseUrl = String(env.SUPABASE_URL || '').trim().replace(/\/+$/, '');
+  const supabaseUrl = String(env.SUPABASE_URL || '')
+    .trim()
+    .replace(/\/rest\/v1\/?$/i, '')
+    .replace(/\/+$/, '');
   const supabaseAnonKey = String(env.SUPABASE_ANON_KEY || '').trim();
   const serviceRoleKey = String(env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
+  const googleClientId = String(env.GOOGLE_CLIENT_ID || '').trim();
   const softBetaMode = String(env.SOFT_BETA_MODE || 'true').trim().toLowerCase() !== 'false';
   return {
     supabaseUrl,
     supabaseAnonKey,
     serviceRoleKey,
+    googleClientId,
     softBetaMode,
     configured: Boolean(supabaseUrl && supabaseAnonKey)
   };

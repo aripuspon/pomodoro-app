@@ -11,6 +11,7 @@ module.exports = async function handler(req, res) {
     configured: env.configured,
     supabaseUrl: env.configured ? env.supabaseUrl : '',
     supabaseAnonKey: env.configured ? env.supabaseAnonKey : '',
+    googleClientId: env.configured ? env.googleClientId : '',
     softBetaMode: env.softBetaMode,
     mode: env.configured ? 'cloud' : 'static',
     features: {

@@ -9,6 +9,7 @@
     configured: false,
     supabaseUrl: '',
     supabaseAnonKey: '',
+    googleClientId: '',
     softBetaMode: true,
     mode: 'static',
     features: { auth: false, cloudSync: false, billingReady: false }
@@ -17,6 +18,8 @@
   let session = loadStoredSession();
   let authMode = 'signin';
   let refreshPromise = null;
+  let gsiScriptPromise = null;
+  let activeGoogleRawNonce = '';
   let syncDebounceTimer = null;
   let isSyncInFlight = false;
   let knownRevision = session?.user?.id ? loadStoredRevision(session.user.id) : null;
@@ -59,6 +62,7 @@
   const authPasswordWrap = document.getElementById('auth-password-wrap');
   const authPasswordInput = document.getElementById('auth-password');
   const btnAuthSubmit = document.getElementById('btn-auth-submit');
+  const googleGsiContainer = document.getElementById('google-gsi-container');
   const btnAuthGoogle = document.getElementById('btn-auth-google');
 
   const accountAvatar = document.getElementById('account-avatar');
@@ -299,6 +303,7 @@
     updateCloudUI();
     accountModal.classList.remove('hidden');
     if (!session && authEmailInput) authEmailInput.focus();
+    renderGoogleSignInWidget();
   }
 
   function closeAccountModal() {
@@ -757,6 +762,134 @@
     });
   }
 
+  async function createNoncePair() {
+    let rawNonce = '';
+    if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
+      const bytes = new Uint8Array(16);
+      crypto.getRandomValues(bytes);
+      rawNonce = Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
+    } else {
+      rawNonce = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 12)}`;
+    }
+
+    if (typeof crypto !== 'undefined' && crypto.subtle && typeof TextEncoder !== 'undefined') {
+      const encoded = new TextEncoder().encode(rawNonce);
+      const digest = await crypto.subtle.digest('SHA-256', encoded);
+      const hashedNonce = Array.from(new Uint8Array(digest), b => b.toString(16).padStart(2, '0')).join('');
+      return { rawNonce, hashedNonce };
+    }
+    return { rawNonce: '', hashedNonce: '' };
+  }
+
+  function loadGoogleGsiScript() {
+    if (typeof window !== 'undefined' && window.google?.accounts?.id) {
+      return Promise.resolve(window.google.accounts.id);
+    }
+    if (gsiScriptPromise) return gsiScriptPromise;
+
+    gsiScriptPromise = new Promise((resolve, reject) => {
+      if (typeof document === 'undefined' || typeof document.createElement !== 'function') {
+        reject(new Error('DOM unavailable for Google Sign-In'));
+        return;
+      }
+      const script = document.createElement('script');
+      script.src = 'https://accounts.google.com/gsi/client';
+      script.async = true;
+      script.defer = true;
+      script.onload = () => {
+        if (window.google?.accounts?.id) {
+          resolve(window.google.accounts.id);
+        } else {
+          gsiScriptPromise = null;
+          reject(new Error('Google Identity Services did not initialize.'));
+        }
+      };
+      script.onerror = () => {
+        gsiScriptPromise = null;
+        reject(new Error('Failed to load Google Sign-In script.'));
+      };
+      const target = document.head || document.documentElement || document.body;
+      if (!target) {
+        gsiScriptPromise = null;
+        reject(new Error('Document root unavailable.'));
+        return;
+      }
+      target.appendChild(script);
+    });
+
+    return gsiScriptPromise;
+  }
+
+  async function handleGoogleIdTokenCredential(response) {
+    const idToken = response?.credential;
+    if (!idToken) {
+      showFeedback('Google Sign-In did not return a credential.', true);
+      return;
+    }
+
+    showFeedback('Signing in with Google...');
+    try {
+      const payload = {
+        provider: 'google',
+        id_token: idToken,
+        ...(activeGoogleRawNonce ? { nonce: activeGoogleRawNonce } : {})
+      };
+      const data = await supabaseAuthRequest('/auth/v1/token?grant_type=id_token', payload);
+      saveStoredSession({
+        access_token: data.access_token,
+        refresh_token: data.refresh_token || '',
+        expires_at: data.expires_at || (Math.floor(Date.now() / 1000) + (Number(data.expires_in) || 3600)),
+        user: data.user || null
+      });
+      showFeedback('');
+      await bootstrapCloudSession();
+    } catch (err) {
+      showFeedback(err?.message || 'Google authentication failed.', true);
+      renderGoogleSignInWidget();
+    }
+  }
+
+  async function renderGoogleSignInWidget() {
+    if (!googleGsiContainer || !btnAuthGoogle) return;
+    if (!cloudConfig.configured || !cloudConfig.googleClientId || session) {
+      googleGsiContainer.classList.add('hidden');
+      btnAuthGoogle.classList.remove('hidden');
+      return;
+    }
+
+    try {
+      const gsi = await loadGoogleGsiScript();
+      const { rawNonce, hashedNonce } = await createNoncePair();
+      activeGoogleRawNonce = rawNonce;
+
+      gsi.initialize({
+        client_id: cloudConfig.googleClientId,
+        callback: handleGoogleIdTokenCredential,
+        ...(hashedNonce ? { nonce: hashedNonce } : {}),
+        ux_mode: 'popup',
+        context: 'signin'
+      });
+
+      googleGsiContainer.innerHTML = '';
+      googleGsiContainer.classList.remove('hidden');
+      btnAuthGoogle.classList.add('hidden');
+
+      const width = Math.min(388, Math.max(240, Math.floor(googleGsiContainer.clientWidth || 350)));
+      const isDark = document.documentElement?.getAttribute?.('data-theme') === 'dark';
+      gsi.renderButton(googleGsiContainer, {
+        type: 'standard',
+        theme: isDark ? 'filled_black' : 'outline',
+        size: 'large',
+        text: 'continue_with',
+        shape: 'rectangular',
+        width
+      });
+    } catch {
+      googleGsiContainer.classList.add('hidden');
+      btnAuthGoogle.classList.remove('hidden');
+    }
+  }
+
   if (btnAuthGoogle) {
     btnAuthGoogle.addEventListener('click', () => {
       if (!cloudConfig.configured) {
@@ -864,6 +997,9 @@
       syncStateLabel = 'Local only';
       lastSyncedAt = null;
       updateCloudUI();
+      if (accountModal && !accountModal.classList.contains('hidden')) {
+        renderGoogleSignInWidget();
+      }
       showFeedback('Signed out. Local browser data remains safely here.');
     });
   }
