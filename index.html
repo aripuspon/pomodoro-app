@@ -22,7 +22,7 @@
         <h1>Pomodoro</h1>
       </div>
       <div class="header-controls">
-        <button type="button" id="btn-pip-timer" class="header-pill-btn" data-pro-feature="Mini Timer" title="Pop out Always-on-Top Mini Timer" aria-label="Pop out Mini Timer" aria-pressed="false">
+        <button type="button" id="btn-pip-timer" class="header-pill-btn" data-pro-feature="mini-timer" title="Pop out Always-on-Top Mini Timer" aria-label="Pop out Mini Timer" aria-pressed="false">
           <span class="btn-icon" aria-hidden="true">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <rect x="2" y="4" width="20" height="16" rx="2"></rect>
@@ -31,7 +31,7 @@
           </span>
           <span class="hide-on-mobile">Mini Timer</span>
         </button>
-        <button type="button" id="btn-zen-mode" class="header-pill-btn" data-pro-feature="Zen Mode" title="Enter Zen Focus Mode (Z)" aria-label="Enter Zen Focus Mode" aria-pressed="false">
+        <button type="button" id="btn-zen-mode" class="header-pill-btn" data-pro-feature="zen-mode" title="Enter Zen Focus Mode (Z)" aria-label="Enter Zen Focus Mode" aria-pressed="false">
           <span class="btn-icon" aria-hidden="true">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <polyline points="15 3 21 3 21 9"></polyline>
@@ -177,7 +177,7 @@
                 </span>
                 <span id="ambient-toggle-label">Play</span>
               </button>
-              <button type="button" id="btn-sound-studio" class="small-btn icon-label-btn studio-toggle-btn" data-pro-feature="Studio" title="Open Sound Studio multi-layer mixer" aria-expanded="false" aria-controls="sound-studio-panel">
+              <button type="button" id="btn-sound-studio" class="small-btn icon-label-btn studio-toggle-btn" data-pro-feature="sound-studio" title="Open Sound Studio multi-layer mixer" aria-expanded="false" aria-controls="sound-studio-panel">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                   <line x1="4" y1="21" x2="4" y2="14"></line>
                   <line x1="4" y1="10" x2="4" y2="3"></line>
@@ -277,8 +277,8 @@
 
           <div class="task-bucket-tabs" role="tablist" aria-label="Task Plan View">
             <button type="button" class="task-bucket-tab active" role="tab" aria-selected="true" data-bucket="today">Today <span id="bucket-count-today" class="bucket-count">0</span></button>
-            <button type="button" class="task-bucket-tab" role="tab" aria-selected="false" data-bucket="backlog" data-pro-feature="Backlog">Backlog <span id="bucket-count-backlog" class="bucket-count">0</span></button>
-            <button type="button" class="task-bucket-tab" role="tab" aria-selected="false" data-bucket="all" data-pro-feature="All">All</button>
+            <button type="button" class="task-bucket-tab" role="tab" aria-selected="false" data-bucket="backlog" data-pro-feature="backlog">Backlog <span id="bucket-count-backlog" class="bucket-count">0</span></button>
+            <button type="button" class="task-bucket-tab" role="tab" aria-selected="false" data-bucket="all" data-pro-feature="backlog">All</button>
           </div>
 
           <ul id="task-list" class="task-list"></ul>
@@ -309,7 +309,7 @@
                   </select>
                 </div>
                 <div class="est-pomo-wrapper">
-                  <label for="task-recurrence">Repeat</label>
+                  <label for="task-recurrence" data-pro-feature="recurrence">Repeat</label>
                   <select id="task-recurrence" class="settings-select task-plan-select" title="Auto-repeat completed task on schedule">
                     <option value="none">One-time</option>
                     <option value="daily">Daily</option>
@@ -320,7 +320,7 @@
               </div>
 
               <div class="extra-fields-toggles">
-                <button type="button" id="btn-add-subtasks" class="link-btn" data-pro-feature="Subtasks">+ Subtasks</button>
+                <button type="button" id="btn-add-subtasks" class="link-btn" data-pro-feature="subtasks">+ Subtasks</button>
                 <button type="button" id="btn-add-note" class="link-btn">+ Add Note</button>
                 <button type="button" id="btn-add-project" class="link-btn">+ Add Project</button>
               </div>
@@ -342,7 +342,7 @@
           <div class="task-summary-footer">
             <span id="summary-pomos">Pomos: <strong>0 / 0</strong></span>
             <span id="summary-finish">Finish At: <strong>--:--</strong> (0h)</span>
-            <button type="button" id="btn-toggle-timeline" class="small-btn icon-label-btn" data-pro-feature="Schedule" aria-expanded="false" title="Show today's visual time-blocking timeline">
+            <button type="button" id="btn-toggle-timeline" class="small-btn icon-label-btn" data-pro-feature="timeline" aria-expanded="false" title="Show today's visual time-blocking timeline">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <rect x="3" y="4" width="18" height="18" rx="2"></rect>
                 <line x1="16" y1="2" x2="16" y2="6"></line>
@@ -377,9 +377,9 @@
             <div class="analytics-range-tabs" role="tablist" aria-label="Analytics Range">
               <button type="button" class="range-tab active" role="tab" aria-selected="true" data-range="today">Today</button>
               <button type="button" class="range-tab" role="tab" aria-selected="false" data-range="week">7D</button>
-              <button type="button" class="range-tab" role="tab" aria-selected="false" data-range="month" data-pro-feature="30D">30D</button>
-              <button type="button" class="range-tab" role="tab" aria-selected="false" data-range="year" data-pro-feature="Year">Year</button>
-              <button type="button" class="range-tab" role="tab" aria-selected="false" data-range="custom" data-pro-feature="Custom">Custom</button>
+              <button type="button" class="range-tab" role="tab" aria-selected="false" data-range="month" data-pro-feature="analytics-ranges">30D</button>
+              <button type="button" class="range-tab" role="tab" aria-selected="false" data-range="year" data-pro-feature="analytics-ranges">Year</button>
+              <button type="button" class="range-tab" role="tab" aria-selected="false" data-range="custom" data-pro-feature="analytics-ranges">Custom</button>
             </div>
           </div>
 
@@ -453,7 +453,7 @@
                 <span id="session-log-label">Session Log (0)</span>
               </button>
               <div class="export-actions">
-                <button type="button" id="btn-export-timesheet" class="small-btn icon-label-btn" data-pro-feature="Timesheet" title="Export project summary timesheet CSV for selected range">
+                <button type="button" id="btn-export-timesheet" class="small-btn icon-label-btn" data-pro-feature="timesheet" title="Export project summary timesheet CSV for selected range">
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                     <rect x="3" y="4" width="18" height="16" rx="2"></rect>
                     <line x1="3" y1="10" x2="21" y2="10"></line>
@@ -508,19 +508,19 @@
                     <span class="palette-dot palette-dot-classic" aria-hidden="true"></span>
                     <span>Pomodoro</span>
                   </button>
-                  <button type="button" class="palette-btn" data-palette="nordic" data-pro-feature="Nordic" aria-pressed="false" title="Nordic Indigo">
+                  <button type="button" class="palette-btn" data-palette="nordic" data-pro-feature="themes" aria-pressed="false" title="Nordic Indigo">
                     <span class="palette-dot palette-dot-nordic" aria-hidden="true"></span>
                     <span>Nordic</span>
                   </button>
-                  <button type="button" class="palette-btn" data-palette="matcha" data-pro-feature="Matcha" aria-pressed="false" title="Matcha Botanical">
+                  <button type="button" class="palette-btn" data-palette="matcha" data-pro-feature="themes" aria-pressed="false" title="Matcha Botanical">
                     <span class="palette-dot palette-dot-matcha" aria-hidden="true"></span>
                     <span>Matcha</span>
                   </button>
-                  <button type="button" class="palette-btn" data-palette="sunset" data-pro-feature="Sunset" aria-pressed="false" title="Amber Dusk">
+                  <button type="button" class="palette-btn" data-palette="sunset" data-pro-feature="themes" aria-pressed="false" title="Amber Dusk">
                     <span class="palette-dot palette-dot-sunset" aria-hidden="true"></span>
                     <span>Sunset</span>
                   </button>
-                  <button type="button" class="palette-btn" data-palette="mono" data-pro-feature="Minimal" aria-pressed="false" title="Minimal Ink">
+                  <button type="button" class="palette-btn" data-palette="mono" data-pro-feature="themes" aria-pressed="false" title="Minimal Ink">
                     <span class="palette-dot palette-dot-mono" aria-hidden="true"></span>
                     <span>Minimal</span>
                   </button>
@@ -530,22 +530,22 @@
                 <span class="settings-sublabel">Clock Display</span>
                 <div id="timer-layout-picker" class="segmented-choice" role="group" aria-label="Clock Display">
                   <button type="button" class="choice-btn active" data-timer-layout="clean" aria-pressed="true">Clean</button>
-                  <button type="button" class="choice-btn" data-timer-layout="ring" data-pro-feature="Ring" aria-pressed="false">Ring</button>
+                  <button type="button" class="choice-btn" data-timer-layout="ring" data-pro-feature="themes" aria-pressed="false">Ring</button>
                 </div>
               </div>
               <div class="settings-row settings-row-wrap">
                 <span class="settings-sublabel">Clock Font</span>
                 <div id="timer-font-picker" class="segmented-choice" role="group" aria-label="Clock Font">
                   <button type="button" class="choice-btn active" data-timer-font="sans" aria-pressed="true">Sans</button>
-                  <button type="button" class="choice-btn" data-timer-font="mono" data-pro-feature="Mono" aria-pressed="false">Mono</button>
-                  <button type="button" class="choice-btn" data-timer-font="serif" data-pro-feature="Serif" aria-pressed="false">Serif</button>
+                  <button type="button" class="choice-btn" data-timer-font="mono" data-pro-feature="themes" aria-pressed="false">Mono</button>
+                  <button type="button" class="choice-btn" data-timer-font="serif" data-pro-feature="themes" aria-pressed="false">Serif</button>
                 </div>
               </div>
               <div class="settings-row settings-row-wrap">
                 <span class="settings-sublabel">Backdrop</span>
                 <div id="backdrop-style-picker" class="segmented-choice" role="group" aria-label="Backdrop Style">
                   <button type="button" class="choice-btn active" data-backdrop="glow" aria-pressed="true">Soft Glow</button>
-                  <button type="button" class="choice-btn" data-backdrop="aurora" data-pro-feature="Aurora" aria-pressed="false">Aurora</button>
+                  <button type="button" class="choice-btn" data-backdrop="aurora" data-pro-feature="themes" aria-pressed="false">Aurora</button>
                   <button type="button" class="choice-btn" data-backdrop="minimal" aria-pressed="false">Flat</button>
                 </div>
               </div>
@@ -642,7 +642,7 @@
                 <input type="number" id="setting-daily-goal" class="small-number-input" min="1" max="30" step="1" value="6" title="Target work sessions per day for streak and progress">
               </div>
               <div class="settings-row settings-row-col">
-                <span class="settings-sublabel" data-pro-feature="Rest Days">Rest Days (Won't break your streak)</span>
+                <span class="settings-sublabel" data-pro-feature="streak-protection">Rest Days (Won't break your streak)</span>
                 <div id="rest-days-selector" class="rest-days-selector" role="group" aria-label="Rest Days">
                   <button type="button" class="rest-day-btn" data-day="0" aria-pressed="false">Sun</button>
                   <button type="button" class="rest-day-btn" data-day="1" aria-pressed="false">Mon</button>
@@ -654,7 +654,7 @@
                 </div>
               </div>
               <div class="settings-row">
-                <label class="toggle-label" data-pro-feature="Streak Freeze" title="Bridge up to 1 missed workday every 7 days automatically">
+                <label class="toggle-label" data-pro-feature="streak-protection" title="Bridge up to 1 missed workday every 7 days automatically">
                   <input type="checkbox" id="toggle-streak-freeze">
                   <span>Auto Streak Freeze (1/wk)</span>
                 </label>
@@ -972,12 +972,12 @@
           <div class="plan-price"><span id="upgrade-pro-price" class="upgrade-pro-amount">$5</span> <span id="upgrade-pro-cycle">/ month</span></div>
           <div id="upgrade-payment-methods" class="upgrade-payment-methods">Card / PayPal via Lemon Squeezy &middot; Cancel anytime</div>
           <ul class="plan-features-list">
-            <li>Multi-Device Cloud Sync (Supabase)</li>
-            <li>Mini Timer (PiP) &amp; Fullscreen Zen Mode</li>
-            <li>8-Track Sound Studio &amp; Saved Mixes</li>
-            <li>365-Day Heatmap, Pro Insights &amp; Timesheets</li>
-            <li>Backlog, Subtasks, Recurrence &amp; Day Timeline</li>
-            <li>Nordic, Matcha, Sunset &amp; Minimal Themes + Ring</li>
+            <li><strong>Multi-Device Cloud Sync</strong> &mdash; stay in sync across laptop, desktop &amp; phone</li>
+            <li><strong>Mini Timer (PiP) &amp; Zen Mode</strong> &mdash; zero-distraction floating &amp; fullscreen focus</li>
+            <li><strong>8-Track Sound Studio</strong> &mdash; layer ambient audio &amp; save custom mixes</li>
+            <li><strong>365-Day Heatmap &amp; Timesheets</strong> &mdash; spot peak hours &amp; export client CSVs</li>
+            <li><strong>Backlog, Subtasks &amp; Day Timeline</strong> &mdash; plan realistically with Break Blocker</li>
+            <li><strong>Pro Themes &amp; Streak Freeze</strong> &mdash; Nordic, Matcha, Sunset, Ring &amp; Rest Days</li>
           </ul>
         </div>
       </div>

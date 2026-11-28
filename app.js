@@ -1284,6 +1284,24 @@ function requireProFeature(featureLabel) {
 function refreshEntitlementUI() {
   const pro = hasProAccess();
   htmlDoc.setAttribute('data-pro-access', String(pro));
+  if (typeof document.querySelectorAll === 'function') {
+    document.querySelectorAll('[data-pro-feature]').forEach(el => {
+      if (!el.dataset.originalTitleSaved) {
+        el.dataset.originalTitle = el.getAttribute('title') || '';
+        el.dataset.originalTitleSaved = '1';
+      }
+      if (!pro) {
+        const pitch = window.PomodoroCloud?.getFeaturePitch?.(el.dataset.proFeature);
+        if (pitch) {
+          el.setAttribute('title', `PRO · ${pitch.headline} — ${pitch.description}`);
+        }
+      } else if (el.dataset.originalTitle) {
+        el.setAttribute('title', el.dataset.originalTitle);
+      } else if (typeof el.removeAttribute === 'function') {
+        el.removeAttribute('title');
+      }
+    });
+  }
   if (!pro) {
     if (isSoundStudioOpen) {
       isSoundStudioOpen = false;
@@ -2156,7 +2174,7 @@ function downloadFile(filename, content, mimeType) {
 }
 
 function exportTimesheetCsv() {
-  if (!requireProFeature('Project Timesheet Export')) return;
+  if (!requireProFeature('timesheet')) return;
   const scope = getAnalyticsScopeData(new Date());
   if (scope.logs.length === 0) {
     showExportStatus('No logged sessions in selected range to build timesheet.');
@@ -2352,7 +2370,7 @@ inputDailyGoal.addEventListener('change', () => {
 
 if (toggleStreakFreeze) {
   toggleStreakFreeze.addEventListener('change', (e) => {
-    if (!requireProFeature('Rest Days & Auto Streak Freeze')) {
+    if (!requireProFeature('streak-protection')) {
       e.target.checked = Boolean(appSettings.streakFreezeEnabled);
       return;
     }
@@ -2363,7 +2381,7 @@ if (toggleStreakFreeze) {
 }
 restDayBtns.forEach(btn => {
   btn.addEventListener('click', () => {
-    if (!requireProFeature('Rest Days & Auto Streak Freeze')) return;
+    if (!requireProFeature('streak-protection')) return;
     const day = Number(btn.dataset.day);
     if (!Number.isInteger(day) || day < 0 || day > 6) return;
     const set = new Set(Array.isArray(appSettings.restDays) ? appSettings.restDays : []);
@@ -2380,7 +2398,7 @@ analyticsRangeTabs.forEach(tab => {
   tab.addEventListener('click', () => {
     const nextRange = tab.dataset.range;
     if (!VALID_ANALYTICS_RANGES.includes(nextRange) || analyticsRange === nextRange) return;
-    if (['month', 'year', 'custom'].includes(nextRange) && !requireProFeature('30-Day, 365-Day Heatmap & Custom Analytics')) {
+    if (['month', 'year', 'custom'].includes(nextRange) && !requireProFeature('analytics-ranges')) {
       return;
     }
     analyticsRange = nextRange;
@@ -2533,7 +2551,7 @@ function renderSoundStudioState() {
 
 function applyAudioSelection(selectionKey) {
   const isProSound = selectionKey.startsWith('preset:') || (selectionKey !== 'off' && !FREE_SOUND_TRACKS.has(selectionKey));
-  if (isProSound && !requireProFeature('Sound Studio Presets & Extra Soundscapes')) {
+  if (isProSound && !requireProFeature('sound-presets')) {
     updateAmbientUI();
     return;
   }
@@ -2597,7 +2615,7 @@ btnAmbientToggle.addEventListener('click', () => {
 
 if (btnSoundStudio) {
   btnSoundStudio.addEventListener('click', () => {
-    if (!isSoundStudioOpen && !requireProFeature('8-Track Sound Studio Mixer')) return;
+    if (!isSoundStudioOpen && !requireProFeature('sound-studio')) return;
     isSoundStudioOpen = !isSoundStudioOpen;
     if (!isSoundStudioOpen) isStudioSaveFormOpen = false;
     updateAmbientUI();
@@ -2823,7 +2841,7 @@ function bindButtonChoiceGroup(btns, datasetKey, validValues, settingKey) {
         (settingKey === 'timerLayout' && val !== 'clean') ||
         (settingKey === 'timerFont' && val !== 'sans') ||
         (settingKey === 'backdropStyle' && val === 'aurora');
-      if (isProVisual && !requireProFeature('Pro Themes & Visual Customization')) return;
+      if (isProVisual && !requireProFeature('themes')) return;
       appSettings[settingKey] = val;
       saveSettings();
       applyVisualSettings();
@@ -3256,7 +3274,7 @@ function handleRecoveryContainerClick(e) {
 
 function openZenMode() {
   if (!zenOverlay || isZenOpen) return;
-  if (!requireProFeature('Fullscreen Zen Mode')) return;
+  if (!requireProFeature('zen-mode')) return;
   isZenOpen = true;
   zenOverlay.classList.remove('hidden');
   if (btnZenMode) {
@@ -3579,7 +3597,7 @@ async function togglePipTimer() {
     closePipTimer();
     return;
   }
-  if (!requireProFeature('Floating Mini Timer (PiP)')) return;
+  if (!requireProFeature('mini-timer')) return;
 
   if (window.documentPictureInPicture && typeof window.documentPictureInPicture.requestWindow === 'function') {
     try {
@@ -4004,7 +4022,7 @@ taskBucketTabs.forEach(tab => {
   tab.addEventListener('click', () => {
     const next = tab.dataset.bucket;
     if (!VALID_TASK_BUCKETS.includes(next) || activeTaskBucket === next) return;
-    if (next !== 'today' && !requireProFeature('Backlog & Task Planning')) return;
+    if (next !== 'today' && !requireProFeature('backlog')) return;
     activeTaskBucket = next;
     editingTaskId = null;
     renderTasks();
@@ -4201,7 +4219,7 @@ btnCancelTask.addEventListener('click', () => {
 });
 if (btnAddSubtasks && inputSubtasks) {
   btnAddSubtasks.addEventListener('click', () => {
-    if (!requireProFeature('Task Subtasks')) return;
+    if (!requireProFeature('subtasks')) return;
     btnAddSubtasks.classList.add('hidden');
     inputSubtasks.classList.remove('hidden');
     inputSubtasks.focus();
@@ -4209,14 +4227,14 @@ if (btnAddSubtasks && inputSubtasks) {
 }
 if (inputBucket) {
   inputBucket.addEventListener('change', () => {
-    if (inputBucket.value === 'backlog' && !requireProFeature('Backlog & Task Planning')) {
+    if (inputBucket.value === 'backlog' && !requireProFeature('backlog')) {
       inputBucket.value = 'today';
     }
   });
 }
 if (inputRecurrence) {
   inputRecurrence.addEventListener('change', () => {
-    if (inputRecurrence.value !== 'none' && !requireProFeature('Recurring Tasks')) {
+    if (inputRecurrence.value !== 'none' && !requireProFeature('recurrence')) {
       inputRecurrence.value = 'none';
     }
   });
@@ -4549,7 +4567,7 @@ function saveEdit(id, titleEl, actEl, estEl, noteEl, projectEl, bucketEl, recurE
 }
 
 function toggleTaskBucket(id) {
-  if (!requireProFeature('Backlog & Task Planning')) return;
+  if (!requireProFeature('backlog')) return;
   const task = tasks.find(t => t.id === id);
   if (!task) return;
   task.bucket = task.bucket === 'backlog' ? 'today' : 'backlog';
@@ -4761,7 +4779,7 @@ function updateTaskSummary() {
 
 if (btnToggleTimeline) {
   btnToggleTimeline.addEventListener('click', () => {
-    if (!isTimelineOpen && !requireProFeature('Visual Day Timeline & Break Blocker')) return;
+    if (!isTimelineOpen && !requireProFeature('timeline')) return;
     isTimelineOpen = !isTimelineOpen;
     updateTaskSummary();
   });

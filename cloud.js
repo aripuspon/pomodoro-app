@@ -5,6 +5,103 @@
   const PENDING_UPLOAD_PREFIX = 'pomodoroCloudPending:';
   const SYNC_DEBOUNCE_MS = 1200;
 
+  const PRO_FEATURE_PITCHES = {
+    'mini-timer': {
+      name: 'Floating Mini Timer (PiP)',
+      headline: 'Stay in flow over every window',
+      description: 'Pop out an always-on-top Mini Timer while coding, studying, or presenting so you never lose focus switching tabs.'
+    },
+    'zen-mode': {
+      name: 'Fullscreen Zen Mode',
+      headline: 'Eliminate every distraction',
+      description: 'Turn your entire screen into a calm, fullscreen focus sanctuary with breathing cues and zero visual clutter.'
+    },
+    'sound-studio': {
+      name: '8-Track Sound Studio Mixer',
+      headline: 'Craft your signature focus soundscape',
+      description: 'Blend 8 studio-grade ambient layers (Rain, Cafe, Fireplace, Forest, Alpha Hum & more) and save custom mixes.'
+    },
+    'sound-presets': {
+      name: 'Curated Focus Soundscapes',
+      headline: 'Drop into deep work in one click',
+      description: 'Unlock Deep Code, Cozy Study, Coffee Shop, Forest Zen, and all 8 soundscapes engineered to mask distractions.'
+    },
+    'analytics-ranges': {
+      name: '30-Day, 365-Day Heatmap & Custom Stats',
+      headline: 'See a full year of deep-work momentum',
+      description: 'Track 30-day trends, a GitHub-style 365-day focus heatmap, custom date ranges, and Pro insights to spot your peak hours.'
+    },
+    'timesheet': {
+      name: 'Project Timesheet Export',
+      headline: 'Client-ready timesheets in one click',
+      description: 'Export clean, project-grouped CSV timesheets with total hours and focus quality scores — built for freelancers and pros.'
+    },
+    'streak-protection': {
+      name: 'Rest Days & Auto Streak Freeze',
+      headline: 'Protect your streak without burning out',
+      description: 'Schedule weekly Rest Days and get an automatic weekly Streak Freeze so healthy time off never resets your progress.'
+    },
+    'backlog': {
+      name: 'Backlog & Task Planning',
+      headline: 'Capture ideas now, stay focused on Today',
+      description: 'Park future work in a dedicated Backlog so your Today list stays calm, realistic, and focused on what ships now.'
+    },
+    'subtasks': {
+      name: 'Task Subtasks',
+      headline: 'Break big goals into effortless wins',
+      description: 'Split large tasks into bite-sized checklist steps right inside each card so getting started feels frictionless.'
+    },
+    'recurrence': {
+      name: 'Recurring Tasks',
+      headline: 'Automate your daily & weekly rituals',
+      description: 'Set tasks to respawn automatically every day, weekday, or week so your best habits run on autopilot.'
+    },
+    'timeline': {
+      name: 'Visual Day Timeline & Break Blocker',
+      headline: 'Map your entire workday in seconds',
+      description: 'Preview exact Pomodoro finish times on a visual timeline and block off lunch or meetings to keep your day realistic.'
+    },
+    'themes': {
+      name: 'Pro Themes & Visual Customization',
+      headline: 'Make your workspace unmistakably yours',
+      description: 'Unlock Nordic, Matcha, Sunset & Minimal themes, the radial Ring clock, Mono/Serif fonts, and Aurora backdrops.'
+    },
+    'cloud-sync': {
+      name: 'Multi-Device Cloud Sync',
+      headline: 'Pick up right where you left off, anywhere',
+      description: 'Automatically sync tasks, streaks, sound mixes, and analytics across laptop, desktop, and phone with real-time backup.'
+    }
+  };
+
+  function escapeCloudHtml(str) {
+    return String(str ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function resolveFeaturePitch(reasonOrKey) {
+    const raw = String(reasonOrKey || '').trim();
+    if (!raw) {
+      return {
+        name: 'PomoNow Pro',
+        headline: 'Unlock the complete deep-work suite',
+        description: 'Get multi-device Cloud Sync, Zen Mode, 8-Track Sound Studio, 365-Day Heatmap, Day Timeline, and Pro themes.'
+      };
+    }
+    if (PRO_FEATURE_PITCHES[raw]) return PRO_FEATURE_PITCHES[raw];
+    const lower = raw.toLowerCase();
+    const byName = Object.values(PRO_FEATURE_PITCHES).find(p => p.name.toLowerCase() === lower);
+    if (byName) return byName;
+    return {
+      name: raw,
+      headline: raw,
+      description: 'Upgrade to PomoNow Pro to unlock this workflow and get the complete deep-work suite.'
+    };
+  }
+
   const DEFAULT_BILLING_CONFIG = {
     lemonSqueezyEnabled: false,
     midtransEnabled: false,
@@ -439,7 +536,14 @@
 
     if (upgradeGateReason) {
       if (pendingGateReason && !entitlement.hasProAccess) {
-        upgradeGateReason.innerHTML = `<strong>Pro Feature:</strong> ${pendingGateReason} is part of PomoNow Pro. Start your 3-day free trial (no card required) or upgrade below.`;
+        const pitch = resolveFeaturePitch(pendingGateReason);
+        upgradeGateReason.innerHTML = `
+          <div class="gate-spotlight-top">
+            <span class="gate-spotlight-kicker">PRO &middot; ${escapeCloudHtml(pitch.name)}</span>
+            <strong class="gate-spotlight-title">${escapeCloudHtml(pitch.headline)}</strong>
+          </div>
+          <p class="gate-spotlight-desc">${escapeCloudHtml(pitch.description)}</p>
+        `;
         upgradeGateReason.classList.remove('hidden');
       } else {
         upgradeGateReason.classList.add('hidden');
@@ -484,7 +588,7 @@
       } else if (entitlement.softBetaMode) {
         upgradePlanStatus.innerHTML = '<strong>Soft Beta Access Active:</strong> All Pro features are currently unlocked while subscription billing is finalized.';
       } else {
-        upgradePlanStatus.innerHTML = '<strong>Free Plan:</strong> Upgrade to Pro to unlock Cloud Sync and the full focus suite.';
+        upgradePlanStatus.innerHTML = '<strong>Free Plan:</strong> Upgrade to Pro to unlock Cloud Sync and 12+ Pro focus tools across the full suite.';
       }
     }
 
@@ -1230,7 +1334,7 @@
   if (btnCloudSyncNow) {
     btnCloudSyncNow.addEventListener('click', async () => {
       if (!entitlement.hasProAccess) {
-        openUpgradeModal('Multi-Device Cloud Sync');
+        openUpgradeModal('cloud-sync');
         return;
       }
       await pushWorkspaceToCloud();
@@ -1365,6 +1469,7 @@
       getEntitlement: () => ({ ...entitlement }),
       hasProAccess: () => Boolean(entitlement.hasProAccess),
       isSoftBetaMode: () => Boolean(entitlement.softBetaMode),
+      getFeaturePitch: (key) => resolveFeaturePitch(key),
       openAccountModal,
       openUpgradeModal,
       closeTopModal,
