@@ -4,7 +4,8 @@ const {
   getBearerToken,
   parseJsonBody,
   verifyAccessToken,
-  supabaseRest
+  supabaseRest,
+  computeEntitlement
 } = require('./_lib/supabase');
 
 async function readWorkspaceRow(userId, env, accessToken) {
@@ -78,6 +79,24 @@ module.exports = async function handler(req, res) {
 
   if (req.method === 'PUT') {
     try {
+      if (!env.softBetaMode) {
+        const encodedId = encodeURIComponent(userId);
+        const profRes = await supabaseRest(
+          `profiles?id=eq.${encodedId}&select=plan,plan_status,billing_provider,current_period_end`,
+          { method: 'GET' },
+          env,
+          accessToken
+        );
+        const profile = Array.isArray(profRes.data) ? profRes.data[0] : null;
+        const ent = computeEntitlement(profile, env);
+        if (!ent.hasProAccess) {
+          return sendJson(res, 403, {
+            error: 'PRO_REQUIRED',
+            message: 'Multi-device Cloud Sync requires an active PomoNow Pro plan or trial.'
+          });
+        }
+      }
+
       const body = await parseJsonBody(req);
       const payload = body?.payload;
       const validationError = validateWorkspacePayload(payload);

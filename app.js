@@ -30,6 +30,7 @@ const SOUND_TRACKS = [
   { id: 'binaural', label: 'Alpha Hum', defaultLevel: 0.45 }
 ];
 const SOUND_TRACK_MAP = Object.fromEntries(SOUND_TRACKS.map(t => [t.id, t]));
+const FREE_SOUND_TRACKS = new Set(['rain', 'brown', 'white']);
 const VALID_AMBIENT_SOUNDS = ['off', 'custom', ...SOUND_TRACKS.map(t => t.id)];
 const BUILT_IN_SOUND_PRESETS = [
   { id: 'deep-code', name: 'Deep Code', mix: { brown: 0.65, rain: 0.35 } },
@@ -1265,6 +1266,37 @@ const sessionLogListEl = document.getElementById('session-log-list');
 // --- INITIALIZATION ---
 let suppressCloudSync = false;
 
+function hasProAccess() {
+  if (typeof window !== 'undefined' && window.PomodoroCloud && typeof window.PomodoroCloud.hasProAccess === 'function') {
+    return Boolean(window.PomodoroCloud.hasProAccess());
+  }
+  return true;
+}
+
+function requireProFeature(featureLabel) {
+  if (hasProAccess()) return true;
+  if (typeof window !== 'undefined' && window.PomodoroCloud && typeof window.PomodoroCloud.openUpgradeModal === 'function') {
+    window.PomodoroCloud.openUpgradeModal(featureLabel);
+  }
+  return false;
+}
+
+function refreshEntitlementUI() {
+  const pro = hasProAccess();
+  htmlDoc.setAttribute('data-pro-access', String(pro));
+  if (!pro) {
+    if (isSoundStudioOpen) {
+      isSoundStudioOpen = false;
+      isStudioSaveFormOpen = false;
+      updateAmbientUI();
+    }
+    if (isTimelineOpen) {
+      isTimelineOpen = false;
+      updateTaskSummary();
+    }
+  }
+}
+
 function notifyWorkspaceChanged(reason = 'update') {
   if (suppressCloudSync) return;
   if (typeof window !== 'undefined' && window.PomodoroCloud && typeof window.PomodoroCloud.onWorkspaceChanged === 'function') {
@@ -1364,6 +1396,7 @@ function init() {
   loadSettings();
   syncSessionIntentUI();
   updateAmbientUI();
+  refreshEntitlementUI();
   renderTasks();
   updateStatsDisplay();
   updateModeButtons();
@@ -2123,6 +2156,7 @@ function downloadFile(filename, content, mimeType) {
 }
 
 function exportTimesheetCsv() {
+  if (!requireProFeature('Project Timesheet Export')) return;
   const scope = getAnalyticsScopeData(new Date());
   if (scope.logs.length === 0) {
     showExportStatus('No logged sessions in selected range to build timesheet.');
@@ -2318,6 +2352,10 @@ inputDailyGoal.addEventListener('change', () => {
 
 if (toggleStreakFreeze) {
   toggleStreakFreeze.addEventListener('change', (e) => {
+    if (!requireProFeature('Rest Days & Auto Streak Freeze')) {
+      e.target.checked = Boolean(appSettings.streakFreezeEnabled);
+      return;
+    }
     appSettings.streakFreezeEnabled = e.target.checked;
     saveSettings();
     renderAnalytics();
@@ -2325,6 +2363,7 @@ if (toggleStreakFreeze) {
 }
 restDayBtns.forEach(btn => {
   btn.addEventListener('click', () => {
+    if (!requireProFeature('Rest Days & Auto Streak Freeze')) return;
     const day = Number(btn.dataset.day);
     if (!Number.isInteger(day) || day < 0 || day > 6) return;
     const set = new Set(Array.isArray(appSettings.restDays) ? appSettings.restDays : []);
@@ -2341,6 +2380,9 @@ analyticsRangeTabs.forEach(tab => {
   tab.addEventListener('click', () => {
     const nextRange = tab.dataset.range;
     if (!VALID_ANALYTICS_RANGES.includes(nextRange) || analyticsRange === nextRange) return;
+    if (['month', 'year', 'custom'].includes(nextRange) && !requireProFeature('30-Day, 365-Day Heatmap & Custom Analytics')) {
+      return;
+    }
     analyticsRange = nextRange;
     checkDailyStatsReset();
     renderAnalytics();
@@ -2490,6 +2532,11 @@ function renderSoundStudioState() {
 }
 
 function applyAudioSelection(selectionKey) {
+  const isProSound = selectionKey.startsWith('preset:') || (selectionKey !== 'off' && !FREE_SOUND_TRACKS.has(selectionKey));
+  if (isProSound && !requireProFeature('Sound Studio Presets & Extra Soundscapes')) {
+    updateAmbientUI();
+    return;
+  }
   if (selectionKey === 'off') {
     appSettings.soundMix = normalizeMixObject({});
     ambientWanted = false;
@@ -2550,6 +2597,7 @@ btnAmbientToggle.addEventListener('click', () => {
 
 if (btnSoundStudio) {
   btnSoundStudio.addEventListener('click', () => {
+    if (!isSoundStudioOpen && !requireProFeature('8-Track Sound Studio Mixer')) return;
     isSoundStudioOpen = !isSoundStudioOpen;
     if (!isSoundStudioOpen) isStudioSaveFormOpen = false;
     updateAmbientUI();
@@ -2770,6 +2818,12 @@ function bindButtonChoiceGroup(btns, datasetKey, validValues, settingKey) {
     btn.addEventListener('click', () => {
       const val = btn.dataset[datasetKey];
       if (!validValues.includes(val) || appSettings[settingKey] === val) return;
+      const isProVisual =
+        (settingKey === 'visualPalette' && val !== 'classic') ||
+        (settingKey === 'timerLayout' && val !== 'clean') ||
+        (settingKey === 'timerFont' && val !== 'sans') ||
+        (settingKey === 'backdropStyle' && val === 'aurora');
+      if (isProVisual && !requireProFeature('Pro Themes & Visual Customization')) return;
       appSettings[settingKey] = val;
       saveSettings();
       applyVisualSettings();
@@ -3202,6 +3256,7 @@ function handleRecoveryContainerClick(e) {
 
 function openZenMode() {
   if (!zenOverlay || isZenOpen) return;
+  if (!requireProFeature('Fullscreen Zen Mode')) return;
   isZenOpen = true;
   zenOverlay.classList.remove('hidden');
   if (btnZenMode) {
@@ -3524,6 +3579,7 @@ async function togglePipTimer() {
     closePipTimer();
     return;
   }
+  if (!requireProFeature('Floating Mini Timer (PiP)')) return;
 
   if (window.documentPictureInPicture && typeof window.documentPictureInPicture.requestWindow === 'function') {
     try {
@@ -3948,6 +4004,7 @@ taskBucketTabs.forEach(tab => {
   tab.addEventListener('click', () => {
     const next = tab.dataset.bucket;
     if (!VALID_TASK_BUCKETS.includes(next) || activeTaskBucket === next) return;
+    if (next !== 'today' && !requireProFeature('Backlog & Task Planning')) return;
     activeTaskBucket = next;
     editingTaskId = null;
     renderTasks();
@@ -4142,7 +4199,28 @@ btnShowAddTask.addEventListener('click', () => {
 btnCancelTask.addEventListener('click', () => {
   resetTaskForm();
 });
-if (btnAddSubtasks && inputSubtasks) bindExtraFieldToggle(btnAddSubtasks, inputSubtasks);
+if (btnAddSubtasks && inputSubtasks) {
+  btnAddSubtasks.addEventListener('click', () => {
+    if (!requireProFeature('Task Subtasks')) return;
+    btnAddSubtasks.classList.add('hidden');
+    inputSubtasks.classList.remove('hidden');
+    inputSubtasks.focus();
+  });
+}
+if (inputBucket) {
+  inputBucket.addEventListener('change', () => {
+    if (inputBucket.value === 'backlog' && !requireProFeature('Backlog & Task Planning')) {
+      inputBucket.value = 'today';
+    }
+  });
+}
+if (inputRecurrence) {
+  inputRecurrence.addEventListener('change', () => {
+    if (inputRecurrence.value !== 'none' && !requireProFeature('Recurring Tasks')) {
+      inputRecurrence.value = 'none';
+    }
+  });
+}
 bindExtraFieldToggle(btnAddNote, inputNote);
 bindExtraFieldToggle(btnAddProject, inputProject);
 
@@ -4471,6 +4549,7 @@ function saveEdit(id, titleEl, actEl, estEl, noteEl, projectEl, bucketEl, recurE
 }
 
 function toggleTaskBucket(id) {
+  if (!requireProFeature('Backlog & Task Planning')) return;
   const task = tasks.find(t => t.id === id);
   if (!task) return;
   task.bucket = task.bucket === 'backlog' ? 'today' : 'backlog';
@@ -4682,6 +4761,7 @@ function updateTaskSummary() {
 
 if (btnToggleTimeline) {
   btnToggleTimeline.addEventListener('click', () => {
+    if (!isTimelineOpen && !requireProFeature('Visual Day Timeline & Break Blocker')) return;
     isTimelineOpen = !isTimelineOpen;
     updateTaskSummary();
   });
@@ -4891,6 +4971,7 @@ if (typeof window !== 'undefined') {
     exportSnapshot: buildWorkspaceSnapshot,
     applySnapshot: (payload) => applyWorkspaceBackupPayload(payload, { silent: true, skipCloudPush: true }),
     mergeSnapshots: mergeWorkspaceSnapshots,
+    refreshEntitlementUI,
     hasMeaningfulData: () => tasks.length > 0 || sessionHistory.length > 0 || dailyStats.sessions > 0
   };
 }

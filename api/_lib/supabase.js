@@ -77,6 +77,63 @@ async function parseJsonBody(req, maxBytes = MAX_JSON_BODY_BYTES) {
   });
 }
 
+async function readRawBody(req, maxBytes = MAX_JSON_BODY_BYTES) {
+  if (req.rawBody !== undefined && req.rawBody !== null) {
+    const rawStr = Buffer.isBuffer(req.rawBody) ? req.rawBody.toString('utf8') : String(req.rawBody);
+    if (Buffer.byteLength(rawStr, 'utf8') > maxBytes) {
+      const err = new Error('Payload too large');
+      err.statusCode = 413;
+      throw err;
+    }
+    return rawStr;
+  }
+
+  if (typeof req.on === 'function' && !req.readableEnded && req.body === undefined) {
+    return new Promise((resolve, reject) => {
+      const chunks = [];
+      let total = 0;
+      req.on('data', (chunk) => {
+        const buf = Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk), 'utf8');
+        total += buf.length;
+        if (total > maxBytes) {
+          const err = new Error('Payload too large');
+          err.statusCode = 413;
+          reject(err);
+          if (typeof req.destroy === 'function') req.destroy();
+          return;
+        }
+        chunks.push(buf);
+      });
+      req.on('end', () => {
+        resolve(Buffer.concat(chunks).toString('utf8'));
+      });
+      req.on('error', reject);
+    });
+  }
+
+  if (Buffer.isBuffer(req.body)) {
+    const rawStr = req.body.toString('utf8');
+    if (Buffer.byteLength(rawStr, 'utf8') > maxBytes) {
+      const err = new Error('Payload too large');
+      err.statusCode = 413;
+      throw err;
+    }
+    return rawStr;
+  }
+  if (typeof req.body === 'string') {
+    if (Buffer.byteLength(req.body, 'utf8') > maxBytes) {
+      const err = new Error('Payload too large');
+      err.statusCode = 413;
+      throw err;
+    }
+    return req.body;
+  }
+  if (req.body && typeof req.body === 'object') {
+    return JSON.stringify(req.body);
+  }
+  return '';
+}
+
 async function verifyAccessToken(accessToken, env, fetchImpl = fetch) {
   if (!accessToken) {
     return { error: 'Missing Authorization Bearer token', status: 401, user: null };
@@ -138,9 +195,11 @@ function computeEntitlement(profile, env) {
   const periodEndMs = profile?.current_period_end ? Date.parse(profile.current_period_end) : null;
   const activePeriod = !periodEndMs || (Number.isFinite(periodEndMs) && periodEndMs > Date.now());
   const isTrialing = (plan === 'pro' && planStatus === 'trialing' && activePeriod);
+  const hasFuturePeriod = Boolean(periodEndMs && Number.isFinite(periodEndMs) && periodEndMs > Date.now());
   const paidPlanActive =
     (plan === 'lifetime') ||
-    (plan === 'pro' && planStatus === 'active' && activePeriod);
+    (plan === 'pro' && planStatus === 'active' && activePeriod) ||
+    (plan === 'pro' && planStatus === 'canceled' && hasFuturePeriod);
 
   const hasProAccess = paidPlanActive || isTrialing || Boolean(env.softBetaMode);
   const trialEndsAt = isTrialing ? (profile?.current_period_end || null) : null;
@@ -157,9 +216,10 @@ function computeEntitlement(profile, env) {
     trialEndsAt,
     trialDaysLeft,
     softBetaMode: Boolean(env.softBetaMode),
-    canCloudSync: true,
+    canCloudSync: hasProAccess,
     billingProvider: profile?.billing_provider || null,
     currentPeriodEnd: profile?.current_period_end || null,
+    customerPortalUrl: profile?.customer_portal_url || null,
     source: paidPlanActive ? 'subscription' : (isTrialing ? 'trial' : (env.softBetaMode ? 'soft_beta' : 'free'))
   };
 }
@@ -169,6 +229,7 @@ module.exports = {
   sendJson,
   getBearerToken,
   parseJsonBody,
+  readRawBody,
   verifyAccessToken,
   supabaseRest,
   computeEntitlement

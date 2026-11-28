@@ -8,10 +8,15 @@ const {
   computeEntitlement
 } = require('./_lib/supabase');
 
+const PROFILE_SELECT_FULL = 'id,email,display_name,avatar_url,plan,plan_status,billing_provider,current_period_end,customer_portal_url,created_at,updated_at';
+const PROFILE_SELECT_LEGACY = 'id,email,display_name,avatar_url,plan,plan_status,billing_provider,current_period_end,created_at,updated_at';
+
 async function getOrCreateProfile(authUser, env, accessToken) {
   const userId = encodeURIComponent(authUser.id);
-  const query = `profiles?id=eq.${userId}&select=id,email,display_name,avatar_url,plan,plan_status,billing_provider,current_period_end,created_at,updated_at`;
-  const existingRes = await supabaseRest(query, { method: 'GET' }, env, accessToken);
+  let existingRes = await supabaseRest(`profiles?id=eq.${userId}&select=${PROFILE_SELECT_FULL}`, { method: 'GET' }, env, accessToken);
+  if (!existingRes.ok && String(existingRes.data?.message || '').includes('customer_portal_url')) {
+    existingRes = await supabaseRest(`profiles?id=eq.${userId}&select=${PROFILE_SELECT_LEGACY}`, { method: 'GET' }, env, accessToken);
+  }
   if (!existingRes.ok) {
     throw new Error(existingRes.data?.message || 'Failed to read user profile');
   }
@@ -93,8 +98,8 @@ module.exports = async function handler(req, res) {
         return sendJson(res, 400, { error: 'displayName cannot be empty.' });
       }
       const userId = encodeURIComponent(auth.user.id);
-      const updated = await supabaseRest(
-        `profiles?id=eq.${userId}&select=id,email,display_name,avatar_url,plan,plan_status,billing_provider,current_period_end`,
+      let updated = await supabaseRest(
+        `profiles?id=eq.${userId}&select=${PROFILE_SELECT_FULL}`,
         {
           method: 'PATCH',
           headers: { Prefer: 'return=representation' },
@@ -103,6 +108,18 @@ module.exports = async function handler(req, res) {
         env,
         accessToken
       );
+      if (!updated.ok && String(updated.data?.message || '').includes('customer_portal_url')) {
+        updated = await supabaseRest(
+          `profiles?id=eq.${userId}&select=${PROFILE_SELECT_LEGACY}`,
+          {
+            method: 'PATCH',
+            headers: { Prefer: 'return=representation' },
+            body: { display_name: displayName }
+          },
+          env,
+          accessToken
+        );
+      }
       if (!updated.ok) {
         return sendJson(res, updated.status || 500, { error: updated.data?.message || 'Could not update display name' });
       }

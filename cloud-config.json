@@ -2,6 +2,27 @@
   "configured": false,
   "softBetaMode": true,
   "mode": "static",
+  "billing": {
+    "lemonSqueezyEnabled": false,
+    "midtransEnabled": false,
+    "midtransSandbox": true,
+    "pricing": {
+      "usd": {
+        "monthly": 5,
+        "annual": 39,
+        "monthlyLabel": "$5",
+        "annualLabel": "$39",
+        "annualSavePct": 35
+      },
+      "idr": {
+        "monthly": 15000,
+        "annual": 150000,
+        "monthlyLabel": "Rp 15.000",
+        "annualLabel": "Rp 150.000",
+        "annualSavePct": 17
+      }
+    }
+  },
   "features": {
     "auth": false,
     "cloudSync": false,

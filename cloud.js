@@ -5,6 +5,28 @@
   const PENDING_UPLOAD_PREFIX = 'pomodoroCloudPending:';
   const SYNC_DEBOUNCE_MS = 1200;
 
+  const DEFAULT_BILLING_CONFIG = {
+    lemonSqueezyEnabled: false,
+    midtransEnabled: false,
+    midtransSandbox: true,
+    pricing: {
+      usd: { monthly: 5, annual: 39, monthlyLabel: '$5', annualLabel: '$39', annualSavePct: 35 },
+      idr: { monthly: 15000, annual: 150000, monthlyLabel: 'Rp 15.000', annualLabel: 'Rp 150.000', annualSavePct: 17 }
+    }
+  };
+
+  function detectDefaultBillingRegion() {
+    try {
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+      if (['Asia/Jakarta', 'Asia/Makassar', 'Asia/Jayapura'].includes(tz)) return 'idr';
+      const lang = String(navigator?.language || '').toLowerCase();
+      if (lang === 'id' || lang.startsWith('id-')) return 'idr';
+    } catch {
+      // Default to USD
+    }
+    return 'usd';
+  }
+
   let cloudConfig = {
     configured: false,
     supabaseUrl: '',
@@ -12,8 +34,15 @@
     googleClientId: '',
     softBetaMode: true,
     mode: 'static',
+    billing: DEFAULT_BILLING_CONFIG,
     features: { auth: false, cloudSync: false, billingReady: false }
   };
+
+  let selectedRegion = detectDefaultBillingRegion();
+  let selectedInterval = 'monthly';
+  let pendingGateReason = '';
+  let isCheckoutInFlight = false;
+  let pendingBillingReturnProvider = '';
 
   let session = loadStoredSession();
   let authMode = 'signin';
@@ -70,6 +99,7 @@
   const accountUserEmail = document.getElementById('account-user-email');
   const accountPlanBadge = document.getElementById('account-plan-badge');
   const btnAccountPlans = document.getElementById('btn-account-plans');
+  const btnManageBilling = document.getElementById('btn-manage-billing');
   const accountDisplayName = document.getElementById('account-display-name');
   const btnSaveProfile = document.getElementById('btn-save-profile');
   const cloudSyncSummary = document.getElementById('cloud-sync-summary');
@@ -86,9 +116,17 @@
   const upgradeModal = document.getElementById('upgrade-modal');
   const upgradeModalBackdrop = document.getElementById('upgrade-modal-backdrop');
   const upgradeModalClose = document.getElementById('upgrade-modal-close');
+  const upgradeGateReason = document.getElementById('upgrade-gate-reason');
   const upgradePlanStatus = document.getElementById('upgrade-plan-status');
+  const billingRegionBtns = document.querySelectorAll('#billing-region-tabs .choice-btn');
+  const billingIntervalBtns = document.querySelectorAll('#billing-interval-tabs .choice-btn');
+  const billingSavePill = document.getElementById('billing-save-pill');
+  const upgradeProPrice = document.getElementById('upgrade-pro-price');
+  const upgradeProCycle = document.getElementById('upgrade-pro-cycle');
+  const upgradePaymentMethods = document.getElementById('upgrade-payment-methods');
   const btnUpgradeCta = document.getElementById('btn-upgrade-cta');
   const upgradeCtaNote = document.getElementById('upgrade-cta-note');
+  const upgradeFeedback = document.getElementById('upgrade-feedback');
 
   function safeStorageGet(key) {
     try {
@@ -180,6 +218,30 @@
     authFeedback.classList.remove('hidden');
   }
 
+  function showUpgradeFeedback(message, isError = false) {
+    if (!upgradeFeedback) return;
+    if (!message) {
+      upgradeFeedback.classList.add('hidden');
+      upgradeFeedback.textContent = '';
+      return;
+    }
+    upgradeFeedback.textContent = message;
+    upgradeFeedback.classList.toggle('is-error', Boolean(isError));
+    upgradeFeedback.classList.remove('hidden');
+  }
+
+  function getBillingPricing() {
+    const b = cloudConfig.billing || DEFAULT_BILLING_CONFIG;
+    return {
+      lemonSqueezyEnabled: Boolean(b.lemonSqueezyEnabled),
+      midtransEnabled: Boolean(b.midtransEnabled),
+      pricing: {
+        usd: { ...DEFAULT_BILLING_CONFIG.pricing.usd, ...(b.pricing?.usd || {}) },
+        idr: { ...DEFAULT_BILLING_CONFIG.pricing.idr, ...(b.pricing?.idr || {}) }
+      }
+    };
+  }
+
   function getPlanLabel() {
     if (entitlement.plan === 'lifetime') return 'Lifetime Pro';
     if (entitlement.paidPlanActive) return 'Pro Active';
@@ -203,6 +265,13 @@
     const email = userProfile?.email || session?.user?.email || '';
     const displayName = userProfile?.displayName || session?.user?.user_metadata?.full_name || email.split('@')[0] || 'Account';
 
+    if (typeof document !== 'undefined' && document.documentElement?.setAttribute) {
+      document.documentElement.setAttribute('data-pro-access', String(Boolean(entitlement.hasProAccess)));
+    }
+    if (typeof window !== 'undefined' && window.PomodoroWorkspace?.refreshEntitlementUI) {
+      window.PomodoroWorkspace.refreshEntitlementUI();
+    }
+
     if (cloudSetupNotice) {
       cloudSetupNotice.classList.toggle('hidden', Boolean(cloudConfig.configured));
     }
@@ -213,6 +282,11 @@
     const planText = getPlanLabel();
     if (settingsPlanBadge) settingsPlanBadge.textContent = planText;
     if (accountPlanBadge) accountPlanBadge.textContent = planText;
+    if (btnManageBilling) {
+      const portalUrl = isSignedIn ? (entitlement.customerPortalUrl || '') : '';
+      btnManageBilling.href = portalUrl || '#';
+      btnManageBilling.classList.toggle('hidden', !portalUrl);
+    }
 
     if (accountBtnLabel) {
       accountBtnLabel.textContent = isSignedIn ? displayName.slice(0, 14) : 'Sign In';
@@ -260,6 +334,44 @@
       syncConflictBox.classList.toggle('hidden', !pendingConflictPayload);
     }
 
+    if (upgradeGateReason) {
+      if (pendingGateReason && !entitlement.hasProAccess) {
+        upgradeGateReason.innerHTML = `<strong>Pro Feature:</strong> ${pendingGateReason} is part of PomoNow Pro. Start your 3-day free trial (no card required) or upgrade below.`;
+        upgradeGateReason.classList.remove('hidden');
+      } else {
+        upgradeGateReason.classList.add('hidden');
+        upgradeGateReason.textContent = '';
+      }
+    }
+
+    const billingInfo = getBillingPricing();
+    const tier = selectedRegion === 'idr' ? billingInfo.pricing.idr : billingInfo.pricing.usd;
+    const isAnnual = selectedInterval === 'annual';
+    const priceLabel = isAnnual ? tier.annualLabel : tier.monthlyLabel;
+    const cycleLabel = isAnnual ? '/ year' : '/ month';
+    const providerReady = selectedRegion === 'idr' ? billingInfo.midtransEnabled : billingInfo.lemonSqueezyEnabled;
+
+    billingRegionBtns.forEach(btn => {
+      const active = btn.dataset.billingRegion === selectedRegion;
+      btn.classList.toggle('active', active);
+      btn.setAttribute('aria-selected', String(active));
+    });
+    billingIntervalBtns.forEach(btn => {
+      const active = btn.dataset.billingInterval === selectedInterval;
+      btn.classList.toggle('active', active);
+      btn.setAttribute('aria-selected', String(active));
+    });
+    if (billingSavePill) {
+      billingSavePill.textContent = `Save ${tier.annualSavePct}%`;
+    }
+    if (upgradeProPrice) upgradeProPrice.textContent = priceLabel;
+    if (upgradeProCycle) upgradeProCycle.textContent = cycleLabel;
+    if (upgradePaymentMethods) {
+      upgradePaymentMethods.textContent = selectedRegion === 'idr'
+        ? 'QRIS, GoPay, OVO, ShopeePay & Bank VA via Midtrans'
+        : 'Card & PayPal via Lemon Squeezy · Cancel anytime';
+    }
+
     if (upgradePlanStatus) {
       if (entitlement.paidPlanActive) {
         upgradePlanStatus.innerHTML = `<strong>${getPlanLabel()}:</strong> All Pro capabilities and Cloud Sync are active on your account.`;
@@ -274,18 +386,26 @@
     }
 
     if (btnUpgradeCta && upgradeCtaNote) {
-      if (!isSignedIn) {
+      btnUpgradeCta.disabled = isCheckoutInFlight;
+      if (isCheckoutInFlight) {
+        btnUpgradeCta.textContent = 'Opening Checkout...';
+        upgradeCtaNote.textContent = 'Redirecting to secure payment page...';
+      } else if (!isSignedIn) {
         btnUpgradeCta.textContent = 'Start 3-Day Free Pro Trial (No Card)';
         upgradeCtaNote.textContent = 'Try all Pro features & Cloud Sync free for 3 days. No credit card required.';
       } else if (entitlement.paidPlanActive) {
-        btnUpgradeCta.textContent = 'Pro Active on Account';
-        upgradeCtaNote.textContent = 'Thank you for supporting PomoNow!';
-      } else if (entitlement.isTrialing) {
-        btnUpgradeCta.textContent = 'Billing Coming Soon (Trial Active)';
-        upgradeCtaNote.textContent = 'No surprise auto-charge after Day 3. Subscriptions are final once billed.';
+        btnUpgradeCta.textContent = selectedRegion === 'idr' ? `Extend Pro (${priceLabel})` : 'Pro Active on Account';
+        btnUpgradeCta.disabled = selectedRegion !== 'idr';
+        upgradeCtaNote.textContent = selectedRegion === 'idr'
+          ? 'Need more time? Prepaid IDR passes add 30 or 365 days onto your active period.'
+          : 'Thank you for supporting PomoNow! Manage or cancel anytime from Account.';
+      } else if (!providerReady && entitlement.softBetaMode) {
+        btnUpgradeCta.textContent = 'Soft Beta Unlocked (Billing Setup Pending)';
+        upgradeCtaNote.textContent = 'All Pro features are free during Soft Beta. Payments activate once provider keys are added.';
       } else {
-        btnUpgradeCta.textContent = entitlement.softBetaMode ? 'Billing Coming Soon (Beta Unlocked)' : 'Upgrade Coming Soon';
-        upgradeCtaNote.textContent = 'Payment checkout (Lemon Squeezy / Paddle / QRIS) will attach right here when enabled.';
+        const verb = selectedRegion === 'idr' ? 'Pay with QRIS / E-Wallet' : 'Upgrade to Pro';
+        btnUpgradeCta.textContent = `${verb} · ${priceLabel} ${cycleLabel}`;
+        upgradeCtaNote.textContent = 'No surprise auto-charge from trials. All paid subscriptions are final once billed.';
       }
     }
   }
@@ -321,14 +441,17 @@
     if (accountModal) accountModal.classList.add('hidden');
   }
 
-  function openUpgradeModal() {
+  function openUpgradeModal(featureReason = '') {
     if (!upgradeModal) return;
     closeAccountModal();
+    pendingGateReason = typeof featureReason === 'string' ? featureReason.trim() : '';
+    showUpgradeFeedback('');
     updateCloudUI();
     upgradeModal.classList.remove('hidden');
   }
 
   function closeUpgradeModal() {
+    pendingGateReason = '';
     if (upgradeModal) upgradeModal.classList.add('hidden');
   }
 
@@ -556,6 +679,15 @@
         return null;
       }
 
+      if (res.status === 403 && res.data?.error === 'PRO_REQUIRED') {
+        entitlement.hasProAccess = false;
+        entitlement.canCloudSync = false;
+        syncStateLabel = 'Pro required to sync';
+        savePendingFlag(session.user?.id, true);
+        updateCloudUI();
+        return null;
+      }
+
       if (!res.ok) {
         throw new Error(res.data?.error || 'Cloud sync upload failed');
       }
@@ -689,6 +821,12 @@
 
   function onWorkspaceChanged() {
     if (!cloudConfig.configured || !session || pendingConflictPayload) return;
+    if (!entitlement.hasProAccess) {
+      if (session.user?.id) savePendingFlag(session.user.id, true);
+      syncStateLabel = 'Pro required to sync';
+      updateCloudUI();
+      return;
+    }
     if (session.user?.id) savePendingFlag(session.user.id, true);
     syncStateLabel = 'Pending sync...';
     updateCloudUI();
@@ -704,11 +842,33 @@
   if (accountModalClose) accountModalClose.addEventListener('click', closeAccountModal);
   if (accountModalBackdrop) accountModalBackdrop.addEventListener('click', closeAccountModal);
 
-  if (btnOpenUpgrade) btnOpenUpgrade.addEventListener('click', openUpgradeModal);
-  if (btnFooterPlans) btnFooterPlans.addEventListener('click', openUpgradeModal);
-  if (btnAccountPlans) btnAccountPlans.addEventListener('click', openUpgradeModal);
+  if (btnOpenUpgrade) btnOpenUpgrade.addEventListener('click', () => openUpgradeModal(''));
+  if (btnFooterPlans) btnFooterPlans.addEventListener('click', () => openUpgradeModal(''));
+  if (btnAccountPlans) btnAccountPlans.addEventListener('click', () => openUpgradeModal(''));
   if (upgradeModalClose) upgradeModalClose.addEventListener('click', closeUpgradeModal);
   if (upgradeModalBackdrop) upgradeModalBackdrop.addEventListener('click', closeUpgradeModal);
+
+  billingRegionBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const nextRegion = btn.dataset.billingRegion;
+      if (nextRegion === 'usd' || nextRegion === 'idr') {
+        selectedRegion = nextRegion;
+        showUpgradeFeedback('');
+        updateCloudUI();
+      }
+    });
+  });
+
+  billingIntervalBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const nextInterval = btn.dataset.billingInterval;
+      if (nextInterval === 'monthly' || nextInterval === 'annual') {
+        selectedInterval = nextInterval;
+        showUpgradeFeedback('');
+        updateCloudUI();
+      }
+    });
+  });
 
   authModeBtns.forEach(btn => {
     btn.addEventListener('click', () => setAuthMode(btn.dataset.authMode));
@@ -937,6 +1097,10 @@
 
   if (btnCloudSyncNow) {
     btnCloudSyncNow.addEventListener('click', async () => {
+      if (!entitlement.hasProAccess) {
+        openUpgradeModal('Multi-Device Cloud Sync');
+        return;
+      }
       await pushWorkspaceToCloud();
     });
   }
@@ -1016,15 +1180,46 @@
     });
   }
 
-  if (btnUpgradeCta) {
-    btnUpgradeCta.addEventListener('click', () => {
-      if (!session) {
-        openAccountModal();
-      } else {
-        closeUpgradeModal();
-        openAccountModal();
+  async function startCheckout() {
+    if (!session) {
+      setAuthMode('signup');
+      openAccountModal();
+      showFeedback('Create a free account first to start your 3-day Pro trial or upgrade.');
+      return;
+    }
+
+    const provider = selectedRegion === 'idr' ? 'midtrans' : 'lemon_squeezy';
+    const billingInfo = getBillingPricing();
+    const providerReady = provider === 'midtrans' ? billingInfo.midtransEnabled : billingInfo.lemonSqueezyEnabled;
+
+    if (!cloudConfig.configured || !providerReady) {
+      const label = provider === 'midtrans' ? 'Midtrans (IDR)' : 'Lemon Squeezy (USD)';
+      showUpgradeFeedback(`${label} checkout is not configured yet. Add the provider keys in Vercel Environment Variables.`, true);
+      return;
+    }
+
+    isCheckoutInFlight = true;
+    showUpgradeFeedback('');
+    updateCloudUI();
+    try {
+      const res = await apiRequest('/api/billing/checkout', {
+        method: 'POST',
+        body: { provider, interval: selectedInterval }
+      });
+      if (!res.ok || !res.data?.checkoutUrl) {
+        throw new Error(res.data?.error || 'Could not start checkout session.');
       }
-    });
+      window.location.href = res.data.checkoutUrl;
+    } catch (err) {
+      showUpgradeFeedback(err?.message || 'Checkout failed.', true);
+    } finally {
+      isCheckoutInFlight = false;
+      updateCloudUI();
+    }
+  }
+
+  if (btnUpgradeCta) {
+    btnUpgradeCta.addEventListener('click', startCheckout);
   }
 
   if (typeof window !== 'undefined') {
@@ -1048,12 +1243,36 @@
     };
   }
 
+  function handleBillingReturnQuery() {
+    if (typeof window === 'undefined' || !window.location?.search) return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('billing') !== 'success') return;
+    pendingBillingReturnProvider = params.get('provider') || '';
+    params.delete('billing');
+    params.delete('provider');
+    const qs = params.toString();
+    const nextUrl = `${window.location.pathname}${qs ? `?${qs}` : ''}${window.location.hash || ''}`;
+    if (window.history && typeof window.history.replaceState === 'function') {
+      window.history.replaceState(null, '', nextUrl);
+    }
+  }
+
   (async function startCloud() {
+    handleBillingReturnQuery();
     await loadCloudConfig();
     extractSessionFromUrlHash();
     updateCloudUI();
     if (cloudConfig.configured && session) {
       await bootstrapCloudSession();
+      if (pendingBillingReturnProvider) {
+        openAccountModal();
+        showFeedback(
+          entitlement.paidPlanActive
+            ? 'Payment confirmed! PomoNow Pro is now active on your account.'
+            : 'Payment submitted — Pro activates automatically within a few seconds once confirmed.'
+        );
+        pendingBillingReturnProvider = '';
+      }
     }
   })();
 })();

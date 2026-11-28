@@ -1,4 +1,5 @@
 const { readEnvConfig, sendJson } = require('./_lib/supabase');
+const { getPublicBillingConfig } = require('./_lib/billing');
 
 module.exports = async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -7,6 +8,7 @@ module.exports = async function handler(req, res) {
   }
 
   const env = readEnvConfig();
+  const billing = getPublicBillingConfig();
   return sendJson(res, 200, {
     configured: env.configured,
     supabaseUrl: env.configured ? env.supabaseUrl : '',
@@ -14,10 +16,11 @@ module.exports = async function handler(req, res) {
     googleClientId: env.configured ? env.googleClientId : '',
     softBetaMode: env.softBetaMode,
     mode: env.configured ? 'cloud' : 'static',
+    billing,
     features: {
       auth: env.configured,
       cloudSync: env.configured,
-      billingReady: env.configured
+      billingReady: Boolean(env.configured && (billing.lemonSqueezyEnabled || billing.midtransEnabled))
     }
   });
 };

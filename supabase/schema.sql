@@ -15,12 +15,14 @@ create table if not exists public.profiles (
   provider_customer_id text,
   provider_subscription_id text,
   current_period_end timestamptz,
+  customer_portal_url text,
   trial_used boolean not null default false,
   created_at timestamptz not null default timezone('utc', now()),
   updated_at timestamptz not null default timezone('utc', now())
 );
 
 alter table public.profiles add column if not exists trial_used boolean not null default false;
+alter table public.profiles add column if not exists customer_portal_url text;
 
 create index if not exists profiles_email_idx on public.profiles (email);
 
@@ -73,6 +75,7 @@ begin
        or new.provider_customer_id is distinct from old.provider_customer_id
        or new.provider_subscription_id is distinct from old.provider_subscription_id
        or new.current_period_end is distinct from old.current_period_end
+       or new.customer_portal_url is distinct from old.customer_portal_url
        or new.trial_used is distinct from old.trial_used then
       raise exception 'Billing and plan fields can only be modified by server webhooks';
     end if;
@@ -151,3 +154,33 @@ create policy "workspaces_update_own"
   on public.workspaces for update
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
+
+-- 7. Idempotent Payment Orders & Webhook Audit Log
+create table if not exists public.payment_orders (
+  order_id text primary key,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  provider text not null check (provider in ('lemon_squeezy', 'midtrans')),
+  plan_interval text not null check (plan_interval in ('monthly', 'annual')),
+  currency text not null,
+  amount numeric not null,
+  status text not null default 'pending' check (status in ('pending', 'paid', 'failed', 'expired', 'canceled')),
+  provider_transaction_id text,
+  period_extended_until timestamptz,
+  raw_event jsonb,
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now())
+);
+
+create index if not exists payment_orders_user_idx on public.payment_orders (user_id, created_at desc);
+
+drop trigger if exists trg_payment_orders_updated_at on public.payment_orders;
+create trigger trg_payment_orders_updated_at
+  before update on public.payment_orders
+  for each row execute function public.set_row_updated_at();
+
+alter table public.payment_orders enable row level security;
+
+drop policy if exists "payment_orders_select_own" on public.payment_orders;
+create policy "payment_orders_select_own"
+  on public.payment_orders for select
+  using (auth.uid() = user_id);
