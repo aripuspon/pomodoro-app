@@ -59,7 +59,53 @@
   let syncStateLabel = 'Local only';
 
   let userProfile = null;
-  let entitlement = {
+  let previewMode = (() => {
+    try {
+      const raw = new URLSearchParams(window.location?.search || '').get('preview');
+      return raw === 'free' || raw === 'pro' ? raw : '';
+    } catch {
+      return '';
+    }
+  })();
+
+  function canUseProPreview() {
+    try {
+      const host = String(window.location?.hostname || '');
+      return cloudConfig.softBetaMode !== false || host === 'localhost' || host === '127.0.0.1';
+    } catch {
+      return cloudConfig.softBetaMode !== false;
+    }
+  }
+
+  function buildFreePreviewEntitlement() {
+    return {
+      plan: 'free',
+      planStatus: 'inactive',
+      hasProAccess: false,
+      paidPlanActive: false,
+      isTrialing: false,
+      softBetaMode: false,
+      canCloudSync: false,
+      customerPortalUrl: null,
+      source: 'free'
+    };
+  }
+
+  function buildProPreviewEntitlement() {
+    return {
+      plan: 'pro',
+      planStatus: 'active',
+      hasProAccess: true,
+      paidPlanActive: true,
+      isTrialing: false,
+      softBetaMode: false,
+      canCloudSync: true,
+      customerPortalUrl: null,
+      source: 'subscription'
+    };
+  }
+
+  let realEntitlement = {
     plan: 'free',
     planStatus: 'inactive',
     hasProAccess: true,
@@ -67,6 +113,40 @@
     canCloudSync: false,
     source: 'soft_beta'
   };
+
+  let entitlement = { ...realEntitlement };
+
+  function syncEffectiveEntitlement() {
+    if (previewMode === 'free') {
+      entitlement = buildFreePreviewEntitlement();
+    } else if (previewMode === 'pro' && canUseProPreview()) {
+      entitlement = buildProPreviewEntitlement();
+    } else {
+      entitlement = { ...realEntitlement };
+    }
+  }
+
+  function applyEntitlement(nextEnt) {
+    realEntitlement = { ...nextEnt };
+    syncEffectiveEntitlement();
+  }
+
+  syncEffectiveEntitlement();
+
+  function resetGuestEntitlement() {
+    const beta = cloudConfig.softBetaMode !== false;
+    applyEntitlement({
+      plan: 'free',
+      planStatus: 'inactive',
+      hasProAccess: Boolean(beta),
+      paidPlanActive: false,
+      isTrialing: false,
+      softBetaMode: Boolean(beta),
+      canCloudSync: false,
+      customerPortalUrl: null,
+      source: beta ? 'soft_beta' : 'free'
+    });
+  }
 
   // DOM Elements
   const btnAccount = document.getElementById('btn-account');
@@ -128,6 +208,11 @@
   const upgradeCtaNote = document.getElementById('upgrade-cta-note');
   const upgradeFeedback = document.getElementById('upgrade-feedback');
 
+  const previewModeBar = document.getElementById('preview-mode-bar');
+  const btnPreviewFree = document.getElementById('btn-preview-free');
+  const btnPreviewPro = document.getElementById('btn-preview-pro');
+  const btnPreviewExit = document.getElementById('btn-preview-exit');
+
   function safeStorageGet(key) {
     try {
       return localStorage.getItem(key);
@@ -178,6 +263,7 @@
       pendingUpload = false;
       pendingConflictPayload = null;
       pendingConflictRevision = null;
+      resetGuestEntitlement();
     }
   }
 
@@ -270,6 +356,23 @@
     }
     if (typeof window !== 'undefined' && window.PomodoroWorkspace?.refreshEntitlementUI) {
       window.PomodoroWorkspace.refreshEntitlementUI();
+    }
+
+    if (previewModeBar) {
+      const showPreviewBar = previewMode === 'free' || (previewMode === 'pro' && canUseProPreview());
+      previewModeBar.classList.toggle('hidden', !showPreviewBar);
+      if (btnPreviewFree) {
+        const active = previewMode === 'free';
+        btnPreviewFree.classList.toggle('active', active);
+        btnPreviewFree.setAttribute('aria-pressed', String(active));
+      }
+      if (btnPreviewPro) {
+        const allowPro = canUseProPreview();
+        btnPreviewPro.classList.toggle('hidden', !allowPro);
+        const active = previewMode === 'pro' && allowPro;
+        btnPreviewPro.classList.toggle('active', active);
+        btnPreviewPro.setAttribute('aria-pressed', String(active));
+      }
     }
 
     if (cloudSetupNotice) {
@@ -470,7 +573,12 @@
   async function loadCloudConfig() {
     if (typeof window !== 'undefined' && window.POMODORO_CLOUD_CONFIG) {
       cloudConfig = { ...cloudConfig, ...window.POMODORO_CLOUD_CONFIG };
-      entitlement.softBetaMode = cloudConfig.softBetaMode !== false;
+      const beta = cloudConfig.softBetaMode !== false;
+      applyEntitlement({
+        ...realEntitlement,
+        softBetaMode: beta,
+        hasProAccess: Boolean(realEntitlement.paidPlanActive || realEntitlement.isTrialing || beta)
+      });
       updateCloudUI();
       return cloudConfig;
     }
@@ -502,10 +610,12 @@
 
       if (data && typeof data === 'object') {
         cloudConfig = { ...cloudConfig, ...data };
-        entitlement.softBetaMode = cloudConfig.softBetaMode !== false;
-        if (!entitlement.paidPlanActive) {
-          entitlement.hasProAccess = entitlement.softBetaMode;
-        }
+        const beta = cloudConfig.softBetaMode !== false;
+        applyEntitlement({
+          ...realEntitlement,
+          softBetaMode: beta,
+          hasProAccess: Boolean(realEntitlement.paidPlanActive || realEntitlement.isTrialing || beta)
+        });
       }
     } catch {
       // Stay cleanly in static/local mode
@@ -639,7 +749,7 @@
       }
     }
     if (res.data.entitlement) {
-      entitlement = res.data.entitlement;
+      applyEntitlement(res.data.entitlement);
     }
     updateCloudUI();
     return res.data;
@@ -841,6 +951,28 @@
   if (btnSettingsAccount) btnSettingsAccount.addEventListener('click', openAccountModal);
   if (accountModalClose) accountModalClose.addEventListener('click', closeAccountModal);
   if (accountModalBackdrop) accountModalBackdrop.addEventListener('click', closeAccountModal);
+
+  function setPreviewMode(nextMode) {
+    previewMode = nextMode === 'free' || (nextMode === 'pro' && canUseProPreview()) ? nextMode : '';
+    try {
+      if (typeof window !== 'undefined' && window.history?.replaceState && window.location) {
+        const params = new URLSearchParams(window.location.search || '');
+        if (previewMode) params.set('preview', previewMode);
+        else params.delete('preview');
+        const qs = params.toString();
+        const nextUrl = `${window.location.pathname}${qs ? `?${qs}` : ''}${window.location.hash || ''}`;
+        window.history.replaceState(null, '', nextUrl);
+      }
+    } catch {
+      // Ignore history errors
+    }
+    syncEffectiveEntitlement();
+    updateCloudUI();
+  }
+
+  if (btnPreviewFree) btnPreviewFree.addEventListener('click', () => setPreviewMode('free'));
+  if (btnPreviewPro) btnPreviewPro.addEventListener('click', () => setPreviewMode('pro'));
+  if (btnPreviewExit) btnPreviewExit.addEventListener('click', () => setPreviewMode(''));
 
   if (btnOpenUpgrade) btnOpenUpgrade.addEventListener('click', () => openUpgradeModal(''));
   if (btnFooterPlans) btnFooterPlans.addEventListener('click', () => openUpgradeModal(''));
